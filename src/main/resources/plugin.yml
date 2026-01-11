@@ -1,0 +1,48 @@
+name: Smite
+version: '1.0'
+main: me.sunmc.smite.Smite
+api-version: '1.21'
+authors: [ sunmc ]
+description: High-performance packet-based ability system for Minecraft Paper
+website: https://github.com/sun-mc-dev/Smite
+
+commands:
+  smite:
+    description: Main command for Smite plugin
+    usage: /<command> [reload|help|activate]
+    aliases: [ sm ]
+  demonicspark:
+    description: Activate Demonic Spark ability
+    usage: /<command>
+    aliases: [ ds, spark ]
+
+permissions:
+  smite.*:
+    description: Grants all Smite permissions
+    default: op
+    children:
+      smite.reload: true
+      smite.ability.*: true
+
+  smite.reload:
+    description: Allows reloading the plugin configuration
+    default: op
+
+  smite.ability.*:
+    description: Grants access to all abilities
+    default: true
+    children:
+      smite.ability.heavenlysmite: true
+      smite.ability.demonicspark: true
+
+  smite.ability.heavenlysmite:
+    description: Allows use of Heavenly Smite ability
+    default: true
+
+  smite.ability.demonicspark:
+    description: Allows use of Demonic Spark ability
+    default: true
+
+  smite.bypass.cooldown:
+    description: Bypasses ability cooldowns
+    default: op

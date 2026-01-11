@@ -1,0 +1,125 @@
+# ========================================
+#           Smite Messages
+# ========================================
+# All player-facing messages
+# Supports MiniMessage formatting
+# Placeholders: {ability}, {time}, {damage}
+
+messages:
+  # Message prefix for all plugin messages
+  prefix: "<gradient:#FFD700:#FF8C00>[Smite]</gradient> "
+
+  # ========================================
+  #         Ability Messages
+  # ========================================
+
+  # When an ability is successfully activated
+  ability-activated: "<green>⚡ Activated {ability}!</green>"
+
+  # When an ability is on cooldown
+  ability-on-cooldown: "<red>✖ {ability} is on cooldown! ({time}s remaining)</red>"
+
+  # When an ability cannot be activated (conditions not met)
+  ability-cannot-activate: "<red>✖ Cannot activate {ability} right now!</red>"
+
+  # When an ability is disabled in config
+  ability-disabled: "<gray>{ability} is currently disabled.</gray>"
+
+  # When an ability finishes its duration
+  ability-ended: "<gray>{ability} has ended.</gray>"
+
+  # When an ability is ready to use again
+  ability-ready: "<green>✓ {ability} is ready!</green>"
+
+  # ========================================
+  #       Heavenly Smite Messages
+  # ========================================
+
+  heavenly-smite:
+    # Message shown on each crit in the chain
+    crit-progress: "<yellow>⚡ Critical Hit Chain: {count}/{required}</yellow>"
+
+    # Message shown when lightning strikes
+    lightning-strike: "<gold><bold>☇ HEAVENLY SMITE!</bold></gold>"
+
+  # ========================================
+  #      Demonic Spark Messages
+  # ========================================
+
+  demonic-spark:
+    # Message shown when ability is activated
+    activated: "<dark_red><bold>⚔ Demonic Spark</bold> <gray>activated! Hit enemies to accumulate damage!</gray></dark_red>"
+
+    # Message shown during accumulation
+    damage-accumulated: "<red>+ {damage} damage accumulated</red>"
+
+    # Message shown when accumulation phase ends
+    ready-for-finisher: "<dark_red><bold>⚡ Demonic Spark</bold> <gray>ready! Accumulated <red>{damage}</red> damage. Next hit releases it!</gray></dark_red>"
+
+    # Message shown when finisher hits
+    finisher-hit: "<dark_red><bold>⚡ DEMONIC SPARK!</bold> <gray>Dealt <red>{damage}</red> damage!</gray></dark_red>"
+
+    # Message shown when finisher expires without being used
+    finisher-expired: "<gray>Demonic Spark finisher expired.</gray>"
+
+  # ========================================
+  #         Command Messages
+  # ========================================
+
+  commands:
+    # Command usage messages
+    usage: "<yellow>Usage: /{command} {args}</yellow>"
+
+    # No permission message
+    no-permission: "<red>✖ You don't have permission to use this!</red>"
+
+    # Reload command messages
+    reload-start: "<yellow>Reloading Smite configuration...</yellow>"
+    reload-success: "<green>✓ Configuration reloaded successfully!</green>"
+    reload-fail: "<red>✖ Failed to reload configuration! Check console for errors.</red>"
+
+    # Help command header
+    help-header: "<gradient:#FFD700:#FF8C00>========== Smite Help ==========</gradient>"
+
+    # Help command entries
+    help-entries:
+      - "<yellow>/smite reload</yellow> <gray>- Reload the plugin configuration</gray>"
+      - "<yellow>/smite help</yellow> <gray>- Show this help message</gray>"
+      - "<yellow>/demonicspark</yellow> <gray>- Activate Demonic Spark ability</gray>"
+
+    # Help command footer
+    help-footer: "<gradient:#FFD700:#FF8C00>================================</gradient>"
+
+  # ========================================
+  #          Error Messages
+  # ========================================
+
+  errors:
+    # General error message
+    generic: "<red>✖ An error occurred! Please contact an administrator.</red>"
+
+    # When a player tries to use an ability they don't have permission for
+    no-ability-permission: "<red>✖ You don't have permission to use {ability}!</red>"
+
+    # When a player tries to activate an ability that doesn't exist
+    ability-not-found: "<red>✖ Ability '{ability}' not found!</red>"
+
+    # When a player must be online to use a command
+    must-be-player: "<red>✖ This command can only be used by players!</red>"
+
+    # When an ability target is invalid
+    invalid-target: "<red>✖ Invalid target for this ability!</red>"
+
+  # ========================================
+  #        Notification Messages
+  # ========================================
+
+  notifications:
+    # Notification when ability cooldown expires (optional)
+    cooldown-expired: "<green>✓ {ability} is ready to use!</green>"
+
+    # Debug messages (only shown when debug mode is enabled)
+    debug:
+      ability-activated: "<gray>[DEBUG] Ability {ability} activated by {player}</gray>"
+      ability-ended: "<gray>[DEBUG] Ability {ability} ended for {player}</gray>"
+      cooldown-set: "<gray>[DEBUG] Cooldown set for {ability}: {time}ms</gray>"
