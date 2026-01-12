@@ -2,6 +2,7 @@ package me.sunmc.smite.ability.impl;
 
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.protocol.particle.Particle;
+import com.github.retrooper.packetevents.protocol.particle.data.ParticleData;
 import com.github.retrooper.packetevents.protocol.particle.type.ParticleTypes;
 import com.github.retrooper.packetevents.util.Vector3d;
 import com.github.retrooper.packetevents.util.Vector3f;
@@ -45,24 +46,6 @@ public class HeavenlySmiteAbility extends AbstractAbility {
                 "A powerful lightning strike triggered by landing three critical hits in succession",
                 AbilityType.OFFENSIVE
         );
-    }
-
-    private static @NotNull WrapperPlayServerParticle getWrapperPlayServerParticle(@NotNull Location center, int i) {
-        double angle = (2 * Math.PI * i) / 60;
-        double radius = 2.0;
-        double x = center.getX() + radius * Math.cos(angle);
-        double z = center.getZ() + radius * Math.sin(angle);
-        double y = center.getY() + 1.0;
-
-        WrapperPlayServerParticle packet = new WrapperPlayServerParticle(
-                (Particle<?>) ParticleTypes.ELECTRIC_SPARK,
-                true,
-                new Vector3d(x, y, z),
-                new Vector3f((float) (Math.cos(angle) * 0.5), 0.1f, (float) (Math.sin(angle) * 0.5)),
-                0.2f,
-                3
-        );
-        return packet;
     }
 
     /**
@@ -166,8 +149,11 @@ public class HeavenlySmiteAbility extends AbstractAbility {
                 double z = loc.getZ() + radius * Math.sin(angle);
                 double y = loc.getY() + 2.0 - (0.1 * i); // Cascade downward
 
+                // Create a Particle object from ParticleType
+                Particle<?> particle = new Particle<>(ParticleTypes.CRIT, ParticleData.emptyData());
+
                 WrapperPlayServerParticle packet = new WrapperPlayServerParticle(
-                        (Particle<?>) ParticleTypes.CRIT,
+                        particle,
                         true,
                         new Vector3d(x, y, z),
                         new Vector3f(0, 0, 0),
@@ -197,21 +183,50 @@ public class HeavenlySmiteAbility extends AbstractAbility {
                 double offsetX = (Math.random() - 0.5) * 2;
                 double offsetZ = (Math.random() - 0.5) * 2;
 
-                WrapperPlayServerParticle packet = new WrapperPlayServerParticle(
-                        (Particle<?>) ParticleTypes.CRIT,
-                        true,
-                        new Vector3d(
-                                center.getX() + offsetX,
-                                center.getY() + 1.0,
-                                center.getZ() + offsetZ
-                        ),
-                        new Vector3f((float) offsetX * 0.2f, 0.5f, (float) offsetZ * 0.2f),
-                        0.3f,
-                        2
-                );
+                // Create Particle object from ParticleType
+                final WrapperPlayServerParticle packet = getWrapperPlayServerParticle(center, offsetX, offsetZ);
 
                 PacketEvents.getAPI().getPlayerManager().sendPacket(player, packet);
             }
         });
+    }
+
+    private static @NotNull WrapperPlayServerParticle getWrapperPlayServerParticle(@NotNull Location center, int i) {
+        double angle = (2 * Math.PI * i) / 60;
+        double radius = 2.0;
+        double x = center.getX() + radius * Math.cos(angle);
+        double z = center.getZ() + radius * Math.sin(angle);
+        double y = center.getY() + 1.0;
+
+        // Create Particle object from ParticleType
+        Particle<?> particle = new Particle<>(ParticleTypes.ELECTRIC_SPARK, ParticleData.emptyData());
+
+        WrapperPlayServerParticle packet = new WrapperPlayServerParticle(
+                particle,
+                true,
+                new Vector3d(x, y, z),
+                new Vector3f((float) (Math.cos(angle) * 0.5), 0.1f, (float) (Math.sin(angle) * 0.5)),
+                0.2f,
+                3
+        );
+        return packet;
+    }
+
+    private static @NotNull WrapperPlayServerParticle getWrapperPlayServerParticle(@NotNull Location center, double offsetX, double offsetZ) {
+        Particle<?> particle = new Particle<>(ParticleTypes.CRIT, ParticleData.emptyData());
+
+        WrapperPlayServerParticle packet = new WrapperPlayServerParticle(
+                particle,
+                true,
+                new Vector3d(
+                        center.getX() + offsetX,
+                        center.getY() + 1.0,
+                        center.getZ() + offsetZ
+                ),
+                new Vector3f((float) offsetX * 0.2f, 0.5f, (float) offsetZ * 0.2f),
+                0.3f,
+                2
+        );
+        return packet;
     }
 }

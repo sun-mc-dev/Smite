@@ -2,6 +2,7 @@ package me.sunmc.smite.ability.impl;
 
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.protocol.particle.Particle;
+import com.github.retrooper.packetevents.protocol.particle.data.ParticleData;
 import com.github.retrooper.packetevents.protocol.particle.type.ParticleTypes;
 import com.github.retrooper.packetevents.util.Vector3d;
 import com.github.retrooper.packetevents.util.Vector3f;
@@ -46,40 +47,6 @@ public class DemonicSparkAbility extends AbstractAbility {
                 "Store damage from hits for 5 seconds, then unleash it in one devastating strike",
                 AbilityType.HYBRID
         );
-    }
-
-    private static @NotNull WrapperPlayServerParticle getPlayServerParticle(@NotNull Location center, int i) {
-        double t = i / 30.0;
-        double x = center.getX() + (2 - t * 4);
-        double y = center.getY() + (2 - t * 4);
-        double z = center.getZ();
-
-        WrapperPlayServerParticle packet = new WrapperPlayServerParticle(
-                (Particle<?>) ParticleTypes.DAMAGE_INDICATOR,
-                true,
-                new Vector3d(x, y, z),
-                new Vector3f(0, 0, 0),
-                0.0f,
-                2
-        );
-        return packet;
-    }
-
-    private static @NotNull WrapperPlayServerParticle getWrapperPlayServerParticle(@NotNull Location center, int i) {
-        double t = i / 30.0;
-        double x = center.getX() + (t * 4 - 2);
-        double y = center.getY() + (2 - t * 4);
-        double z = center.getZ();
-
-        WrapperPlayServerParticle packet = new WrapperPlayServerParticle(
-                (Particle<?>) ParticleTypes.DAMAGE_INDICATOR,
-                true,
-                new Vector3d(x, y, z),
-                new Vector3f(0, 0, 0),
-                0.0f,
-                2
-        );
-        return packet;
     }
 
     /**
@@ -228,8 +195,11 @@ public class DemonicSparkAbility extends AbstractAbility {
                 double offset = i * 0.2 - 1.0;
                 Vector particleVec = loc.toVector().add(new Vector(offset, -offset, 0));
 
+                // Create Particle object from ParticleType
+                Particle<?> particle = new Particle<>(ParticleTypes.DAMAGE_INDICATOR, ParticleData.emptyData());
+
                 WrapperPlayServerParticle packet = new WrapperPlayServerParticle(
-                        (Particle<?>) ParticleTypes.DAMAGE_INDICATOR,
+                        particle,
                         true,
                         new Vector3d(
                                 particleVec.getX(),
@@ -254,16 +224,44 @@ public class DemonicSparkAbility extends AbstractAbility {
      */
     private void playUnleashParticles(@NotNull Player player, @NotNull Location center) {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            // Create Particle object once for reuse
+            Particle<?> damageParticle = new Particle<>(ParticleTypes.DAMAGE_INDICATOR, ParticleData.emptyData());
+            Particle<?> smokeParticle = new Particle<>(ParticleTypes.LARGE_SMOKE, ParticleData.emptyData());
+
             // First diagonal (top-left to bottom-right) - RED
             for (int i = 0; i < 30; i++) {
-                final WrapperPlayServerParticle packet = getWrapperPlayServerParticle(center, i);
+                double t = i / 30.0;
+                double x = center.getX() + (t * 4 - 2);
+                double y = center.getY() + (2 - t * 4);
+                double z = center.getZ();
+
+                WrapperPlayServerParticle packet = new WrapperPlayServerParticle(
+                        damageParticle,
+                        true,
+                        new Vector3d(x, y, z),
+                        new Vector3f(0, 0, 0),
+                        0.0f,
+                        2
+                );
 
                 PacketEvents.getAPI().getPlayerManager().sendPacket(player, packet);
             }
 
             // Second diagonal (top-right to bottom-left) - RED
             for (int i = 0; i < 30; i++) {
-                final WrapperPlayServerParticle packet = getPlayServerParticle(center, i);
+                double t = i / 30.0;
+                double x = center.getX() + (2 - t * 4);
+                double y = center.getY() + (2 - t * 4);
+                double z = center.getZ();
+
+                WrapperPlayServerParticle packet = new WrapperPlayServerParticle(
+                        damageParticle,
+                        true,
+                        new Vector3d(x, y, z),
+                        new Vector3f(0, 0, 0),
+                        0.0f,
+                        2
+                );
 
                 PacketEvents.getAPI().getPlayerManager().sendPacket(player, packet);
             }
@@ -275,7 +273,7 @@ public class DemonicSparkAbility extends AbstractAbility {
                 double offsetZ = (Math.random() - 0.5) * 0.5;
 
                 WrapperPlayServerParticle packet = new WrapperPlayServerParticle(
-                        (Particle<?>) ParticleTypes.LARGE_SMOKE,
+                        smokeParticle,
                         true,
                         new Vector3d(
                                 center.getX() + offsetX,
