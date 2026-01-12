@@ -1,123 +1,219 @@
 package me.sunmc.smite.command;
 
 import me.sunmc.smite.Smite;
-import org.bukkit.command.*;
+import me.sunmc.smite.ability.api.Ability;
+import me.sunmc.smite.ability.api.ActivationContext;
+import me.sunmc.smite.ability.api.ActivationTrigger;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabExecutor;
+import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
- * Main command handler for the Smite plugin.
- *
- * <p>Handles commands like /smite reload, /smite help, etc.</p>
- *
- * @author SunMC
- * @version 1.0.0
+ * Main command for the Smite plugin.
  */
-public final class SmiteCommand implements TabExecutor {
+public class SmiteCommand implements TabExecutor {
 
     private final Smite plugin;
 
-    /**
-     * Constructs the command handler.
-     *
-     * @param plugin the plugin instance
-     */
     public SmiteCommand(@NotNull Smite plugin) {
         this.plugin = plugin;
     }
 
     @Override
-    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command,
-                             @NotNull String label, @NotNull String @NotNull [] args) {
-
+    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String @NotNull [] args) {
         if (args.length == 0) {
             sendHelp(sender);
             return true;
         }
 
-        String subCommand = args[0].toLowerCase();
-
-        switch (subCommand) {
-            case "reload" -> {
-                if (!sender.hasPermission("smite.reload")) {
-                    sender.sendMessage(Objects.requireNonNull(plugin.getConfigManager().getMessage("commands.no-permission")));
-                    return true;
-                }
-                handleReload(sender);
-            }
-            case "help" -> sendHelp(sender);
-            case "info" -> sendInfo(sender);
-            default -> sender.sendMessage(Objects.requireNonNull(plugin.getConfigManager().getMessage(
-                    "commands.usage",
-                    label,
-                    "[reload|help|info]"
-            )));
+        switch (args[0].toLowerCase()) {
+            case "list" -> handleList(sender);
+            case "activate", "use" -> handleActivate(sender, args);
+            case "cooldown", "cd" -> handleCooldown(sender, args);
+            case "reload" -> handleReload(sender);
+            case "info" -> handleInfo(sender, args);
+            default -> sendHelp(sender);
         }
 
         return true;
     }
 
+    private void sendHelp(@NotNull CommandSender sender) {
+        sender.sendMessage(Component.text("=== Smite Commands ===", NamedTextColor.GOLD));
+        sender.sendMessage(Component.text("/smite list", NamedTextColor.YELLOW)
+                .append(Component.text(" - List all abilities", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/smite activate <ability>", NamedTextColor.YELLOW)
+                .append(Component.text(" - Manually activate an ability", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/smite cooldown <player> <ability> clear", NamedTextColor.YELLOW)
+                .append(Component.text(" - Clear cooldown", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/smite info <ability>", NamedTextColor.YELLOW)
+                .append(Component.text(" - Show ability information", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/smite reload", NamedTextColor.YELLOW)
+                .append(Component.text(" - Reload configuration", NamedTextColor.GRAY)));
+    }
+
+    private void handleList(@NotNull CommandSender sender) {
+        sender.sendMessage(Component.text("=== Registered Abilities ===", NamedTextColor.GOLD));
+
+        plugin.getAbilityManager().getAllAbilities().values().forEach(ability -> {
+            Component status = ability.isEnabled()
+                    ? Component.text("✓", NamedTextColor.GREEN)
+                    : Component.text("✗", NamedTextColor.RED);
+
+            sender.sendMessage(status
+                    .append(Component.text(" " + ability.getDisplayName(), NamedTextColor.YELLOW))
+                    .append(Component.text(" (" + ability.getCooldown() + "s)", NamedTextColor.GRAY)));
+        });
+    }
+
+    private void handleActivate(@NotNull CommandSender sender, @NotNull String[] args) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(Component.text("Only players can use this command!", NamedTextColor.RED));
+            return;
+        }
+
+        if (args.length < 2) {
+            sender.sendMessage(Component.text("Usage: /smite activate <ability>", NamedTextColor.RED));
+            return;
+        }
+
+        String abilityId = args[1].toLowerCase().replace("_", "");
+        Ability ability = findAbility(abilityId);
+
+        if (ability == null) {
+            sender.sendMessage(Component.text("Ability not found: " + args[1], NamedTextColor.RED));
+            return;
+        }
+
+        if (!ability.isEnabled()) {
+            sender.sendMessage(Component.text("This ability is currently disabled!", NamedTextColor.RED));
+            return;
+        }
+
+        ActivationContext context = new ActivationContext(ActivationTrigger.MANUAL);
+        plugin.getAbilityManager().activateAbility(player, ability.getId(), context);
+    }
+
+    private void handleCooldown(@NotNull CommandSender sender, @NotNull String[] args) {
+        if (!sender.hasPermission("smite.admin")) {
+            sender.sendMessage(Component.text("No permission!", NamedTextColor.RED));
+            return;
+        }
+
+        if (args.length < 4) {
+            sender.sendMessage(Component.text("Usage: /smite cooldown <player> <ability> clear", NamedTextColor.RED));
+            return;
+        }
+
+        Player target = plugin.getServer().getPlayer(args[1]);
+        if (target == null) {
+            sender.sendMessage(Component.text("Player not found!", NamedTextColor.RED));
+            return;
+        }
+
+        String abilityId = args[2].toLowerCase().replace("_", "");
+        Ability ability = findAbility(abilityId);
+
+        if (ability == null) {
+            sender.sendMessage(Component.text("Ability not found: " + args[2], NamedTextColor.RED));
+            return;
+        }
+
+        if (args[3].equalsIgnoreCase("clear")) {
+            plugin.getAbilityManager().getCooldownManager().clearCooldown(target, ability);
+            sender.sendMessage(Component.text("Cleared cooldown for " + ability.getDisplayName(), NamedTextColor.GREEN));
+        }
+    }
+
+    private void handleReload(@NotNull CommandSender sender) {
+        if (!sender.hasPermission("smite.admin")) {
+            sender.sendMessage(Component.text("No permission!", NamedTextColor.RED));
+            return;
+        }
+
+        plugin.getConfigManager().reload();
+        sender.sendMessage(Component.text("Configuration reloaded!", NamedTextColor.GREEN));
+    }
+
+    private void handleInfo(@NotNull CommandSender sender, @NotNull String @NotNull [] args) {
+        if (args.length < 2) {
+            sender.sendMessage(Component.text("Usage: /smite info <ability>", NamedTextColor.RED));
+            return;
+        }
+
+        String abilityId = args[1].toLowerCase().replace("_", "");
+        Ability ability = findAbility(abilityId);
+
+        if (ability == null) {
+            sender.sendMessage(Component.text("Ability not found: " + args[1], NamedTextColor.RED));
+            return;
+        }
+
+        sender.sendMessage(Component.text("=== " + ability.getDisplayName() + " ===", NamedTextColor.GOLD));
+        sender.sendMessage(Component.text("ID: ", NamedTextColor.GRAY)
+                .append(Component.text(ability.getId(), NamedTextColor.YELLOW)));
+        sender.sendMessage(Component.text("Type: ", NamedTextColor.GRAY)
+                .append(Component.text(ability.getType().name(), NamedTextColor.YELLOW)));
+        sender.sendMessage(Component.text("Cooldown: ", NamedTextColor.GRAY)
+                .append(Component.text(ability.getCooldown() + "s", NamedTextColor.YELLOW)));
+        sender.sendMessage(Component.text("Description: ", NamedTextColor.GRAY)
+                .append(Component.text(ability.getDescription(), NamedTextColor.YELLOW)));
+        sender.sendMessage(Component.text("Enabled: ", NamedTextColor.GRAY)
+                .append(Component.text(ability.isEnabled() ? "Yes" : "No",
+                        ability.isEnabled() ? NamedTextColor.GREEN : NamedTextColor.RED)));
+    }
+
+    private @Nullable Ability findAbility(@NotNull String searchTerm) {
+        // Try exact ID match first
+        Ability ability = plugin.getAbilityManager().getAbility(searchTerm);
+        if (ability != null) {
+            return ability;
+        }
+
+        // Try fuzzy match
+        for (Ability a : plugin.getAbilityManager().getAllAbilities().values()) {
+            if (a.getId().replace("_", "").equalsIgnoreCase(searchTerm)) {
+                return a;
+            }
+            if (a.getDisplayName().replace(" ", "").equalsIgnoreCase(searchTerm)) {
+                return a;
+            }
+        }
+
+        return null;
+    }
+
     @Override
-    public @NotNull List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command,
-                                               @NotNull String alias, @NotNull String @NotNull [] args) {
+    @Nullable
+    public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String @NotNull [] args) {
+        List<String> completions = new ArrayList<>();
 
         if (args.length == 1) {
-            List<String> completions = new ArrayList<>();
-            String input = args[0].toLowerCase();
-
-            for (String subCmd : Arrays.asList("reload", "help", "info")) {
-                if (subCmd.startsWith(input)) {
-                    completions.add(subCmd);
-                }
-            }
-
-            return completions;
+            completions.addAll(Arrays.asList("list", "activate", "cooldown", "reload", "info"));
+        } else if (args.length == 2 && (args[0].equalsIgnoreCase("activate") || args[0].equalsIgnoreCase("info"))) {
+            completions.addAll(plugin.getAbilityManager().getAllAbilities().keySet());
+        } else if (args.length == 2 && args[0].equalsIgnoreCase("cooldown")) {
+            completions.addAll(plugin.getServer().getOnlinePlayers().stream()
+                    .map(Player::getName)
+                    .toList());
+        } else if (args.length == 3 && args[0].equalsIgnoreCase("cooldown")) {
+            completions.addAll(plugin.getAbilityManager().getAllAbilities().keySet());
+        } else if (args.length == 4 && args[0].equalsIgnoreCase("cooldown")) {
+            completions.add("clear");
         }
 
-        return new ArrayList<>();
-    }
-
-    /**
-     * Handles the reload subcommand.
-     */
-    private void handleReload(@NotNull CommandSender sender) {
-        sender.sendMessage(Objects.requireNonNull(plugin.getConfigManager().getMessage("commands.reload-start")));
-
-        if (plugin.reloadPlugin()) {
-            sender.sendMessage(Objects.requireNonNull(plugin.getConfigManager().getMessage("commands.reload-success")));
-        } else {
-            sender.sendMessage(Objects.requireNonNull(plugin.getConfigManager().getMessage("commands.reload-fail")));
-        }
-    }
-
-    /**
-     * Sends help information to the sender.
-     */
-    private void sendHelp(@NotNull CommandSender sender) {
-        sender.sendMessage(Objects.requireNonNull(plugin.getConfigManager().getMessage("commands.help-header")));
-
-        List<String> entries = plugin.getConfigManager().getMessagesConfig()
-                .getStringList("messages.commands.help-entries");
-
-        for (String entry : entries) {
-            sender.sendMessage(entry);
-        }
-
-        sender.sendMessage(Objects.requireNonNull(plugin.getConfigManager().getMessage("commands.help-footer")));
-    }
-
-    /**
-     * Sends plugin information to the sender.
-     */
-    private void sendInfo(@NotNull CommandSender sender) {
-        sender.sendMessage("§6§l========== Smite Info ==========");
-        sender.sendMessage("§7Version: §e" + plugin.getPluginMeta().getVersion());
-        sender.sendMessage("§7Author: §e" + plugin.getPluginMeta().getAuthors().getFirst());
-        sender.sendMessage("§7Loaded Abilities: §e" + plugin.getAbilityRegistry().getRegisteredCount());
-        sender.sendMessage("§6§l================================");
+        return completions.stream()
+                .filter(s -> s.toLowerCase().startsWith(args[args.length - 1].toLowerCase()))
+                .collect(Collectors.toList());
     }
 }

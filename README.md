@@ -1,326 +1,389 @@
-# Smite - High-Performance Ability System
+# Smite - High-Performance Ability Plugin
 
-A packet-based, high-performance ability plugin for Minecraft Paper 1.21.11 featuring two powerful combat abilities with extensive customization options.
+A high-performance, packet-based ability system for Paper 1.21.11 servers with a flexible API for creating custom
+abilities.
 
-## 🌟 Features
+## Features
 
-- **High Performance**: Packet-based implementation for optimal server performance
-- **Two Unique Abilities**: Heavenly Smite and Demonic Spark
-- **Fully Configurable**: Every aspect can be customized via YAML
-- **Extensible API**: Easy-to-use API for creating custom abilities
-- **Persistent Cooldowns**: Optional cooldown persistence across restarts
-- **No Deprecated Methods**: Built with modern Paper API (1.21.11)
-- **Java 21**: Utilizes latest Java features for optimal performance
+- ⚡ **High Performance**: Packet-based particle effects and asynchronous processing
+- 🎨 **Client-Side Effects**: All GUI, titles, and action bars are client-based using PacketEvents
+- 🔧 **Flexible API**: Easy-to-use API for creating custom abilities
+- 🎯 **Zero Deprecated Methods**: Uses only modern Paper API methods
+- 🌟 **Adventure API**: Modern text formatting using Adventure API
+- ☕ **Java 21**: Built with modern Java features
 
----
+## Included Abilities
 
-## 📋 Requirements
+### Heavenly Smite
 
-- **Minecraft Version**: Paper 1.21.11+
-- **Java Version**: 21+
-- **Server Software**: Paper (Spigot not supported due to packet usage)
+**Cooldown:** 45 seconds
 
----
+A lightning-based ability triggered by landing three critical hits in succession. Each strike deals 5 hearts (10.0
+damage) bypassing armor entirely. Features cascading circular particles during critical hits and a dramatic explosion
+effect on activation.
 
-## 🎮 Abilities
+**Activation:** Land 3 critical hits within 3 seconds
 
-### ⚡ Heavenly Smite
+### Demonic Spark
 
-A lightning strike ability triggered by landing consecutive critical hits.
+**Cooldown:** 45 seconds
 
-**Mechanics:**
-- Land 3 consecutive critical hits (configurable)
-- Final crit summons a lightning bolt at target location
-- Deals 10 HP (5 hearts) of pure damage ignoring armor
-- 45-second cooldown (configurable)
+Temporarily disables damage output for 5 seconds while storing all damage dealt. After the duration ends, unleashes all
+stored damage in a single devastating strike with a massive X-shaped slash effect.
 
-**Visual Effects:**
-- Circular falling particles on each crit
-- Explosive particle burst on final crit
-- Enhanced lightning bolt with electric sparks
-- Thunder sound effects
+**Activation:** Manual activation via command or custom trigger
 
-**Configuration:**
-```yaml
-heavenly-smite:
-  enabled: true
-  cooldown: 45
-  required-crits: 3
-  damage: 10.0
-  ignore-armor: true
-```
+## Installation
 
-### 🔥 Demonic Spark
-
-A damage accumulation ability that stores hits and releases them in one devastating blow.
-
-**Mechanics:**
-- Activate manually with `/demonicspark`
-- 5-second accumulation phase (configurable)
-- During accumulation: hits don't damage but store damage values
-- After phase: next hit releases all accumulated damage at once
-- 45-second cooldown (configurable)
-
-**Visual Effects:**
-- Red diagonal slash particles during accumulation
-- Wither sound effects on each hit
-- Large X-pattern particles on finisher
-- Red and black particle explosion
-
-**Configuration:**
-```yaml
-demonic-spark:
-  enabled: true
-  cooldown: 45
-  duration: 5
-  damage-multiplier: 1.0
-```
-
----
-
-## 📥 Installation
-
-1. Download the latest `Smite.jar` from releases
+1. Download the plugin JAR
 2. Place in your server's `plugins` folder
-3. Restart or reload your server
-4. Configure `config.yml` and `messages.yml` to your liking
-5. Reload with `/smite reload`
+3. Restart your server
+4. Configure in `plugins/Smite/config.yml`
 
----
+## Building from Source
 
-## 🎯 Commands
+### Maven
 
-| Command                              | Description                 | Permission                   |
-|--------------------------------------|-----------------------------|------------------------------|
-| `/smite reload`                      | Reload plugin configuration | `smite.reload`               |
-| `/smite help`                        | Display help information    | None                         |
-| `/smite info`                        | Show plugin information     | None                         |
-| `/demonicspark` (or `/ds`, `/spark`) | Activate Demonic Spark      | `smite.ability.demonicspark` |
-
----
-
-## 🔐 Permissions
-
-| Permission                    | Description           | Default |
-|-------------------------------|-----------------------|---------|
-| `smite.*`                     | All Smite permissions | OP      |
-| `smite.reload`                | Reload configuration  | OP      |
-| `smite.ability.*`             | All abilities         | True    |
-| `smite.ability.heavenlysmite` | Use Heavenly Smite    | True    |
-| `smite.ability.demonicspark`  | Use Demonic Spark     | True    |
-| `smite.bypass.cooldown`       | Bypass cooldowns      | OP      |
-
----
-
-## ⚙️ Configuration
-
-### Main Config (`config.yml`)
-
-```yaml
-plugin:
-  debug: false
-  language: "en_US"
-
-abilities:
-  heavenly-smite:
-    enabled: true
-    cooldown: 45
-    required-crits: 3
-    damage: 10.0
-    ignore-armor: true
-    
-  demonic-spark:
-    enabled: true
-    cooldown: 45
-    duration: 5
-    damage-multiplier: 1.0
-
-cooldowns:
-  persist-on-restart: true
-  display-format: "&cCooldown: &e{time}s"
+```bash
+mvn clean package
 ```
 
-### Messages (`messages.yml`)
+The compiled JAR will be in `target/` (Maven).
 
-All player-facing messages support MiniMessage formatting:
+## Commands
 
-```yaml
-messages:
-  prefix: "<gradient:#FFD700:#FF8C00>[Smite]</gradient> "
-  ability-activated: "<green>⚡ Activated {ability}!</green>"
-  ability-on-cooldown: "<red>✖ {ability} is on cooldown! ({time}s remaining)</red>"
-```
+| Command                                    | Description                  | Permission    |
+|--------------------------------------------|------------------------------|---------------|
+| `/smite list`                              | List all abilities           | `smite.use`   |
+| `/smite activate <ability>`                | Manually activate an ability | `smite.use`   |
+| `/smite info <ability>`                    | Show ability information     | `smite.use`   |
+| `/smite cooldown <player> <ability> clear` | Clear a cooldown             | `smite.admin` |
+| `/smite reload`                            | Reload configuration         | `smite.admin` |
 
----
+## Permissions
 
-## 🔌 Developer API
+- `smite.use` - Basic command usage (default: true)
+- `smite.admin` - Admin commands (default: op)
+- `smite.reload` - Reload config (default: op)
+- `smite.cooldown` - Manage cooldowns (default: op)
 
-### Creating Custom Abilities
+## Creating Custom Abilities
+
+The Smite API makes it easy to create custom abilities. Here's a complete example:
+
+### Example: Fire Dash Ability
 
 ```java
-public class MyCustomAbility implements Ability {
-    
-    @Override
-    public String getName() {
-        return "my_custom_ability";
+package com.example.abilities;
+
+import me.sunmc.smite.Smite;
+import me.sunmc.smite.ability.api.AbstractAbility;
+import me.sunmc.smite.ability.api.AbilityType;
+import me.sunmc.smite.ability.api.ActivationContext;
+import me.sunmc.smite.ability.api.ActivationResult;
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
+import org.bukkit.util.Vector;
+import org.jetbrains.annotations.NotNull;
+
+import java.util.concurrent.CompletableFuture;
+
+public class FireDashAbility extends AbstractAbility {
+
+    public FireDashAbility(@NotNull Smite plugin) {
+        super(
+                plugin,
+                "fire_dash",                    // Unique ID
+                "Fire Dash",                    // Display name
+                30,                             // Cooldown in seconds
+                "Dash forward in flames",       // Description
+                AbilityType.MOVEMENT            // Ability type
+        );
     }
-    
+
     @Override
-    public String getDisplayName() {
-        return "§6My Custom Ability";
+    protected boolean canActivateCustom(@NotNull Player player, @NotNull ActivationContext context) {
+        // Custom activation checks
+        return player.isOnGround();
     }
-    
+
     @Override
-    public long getCooldownMillis() {
-        return 30000; // 30 seconds
-    }
-    
-    @Override
-    public boolean canActivate(AbilityContext context) {
-        return context.player().isOnGround();
-    }
-    
-    @Override
-    public void activate(AbilityContext context) {
-        Player player = context.player();
-        // Your ability logic here
-    }
-    
-    @Override
-    public void deactivate(AbilityContext context) {
-        // Cleanup logic here
-    }
-    
-    @Override
-    public boolean isOnCooldown(UUID playerId) {
-        return plugin.getCooldownManager().isOnCooldown(playerId, getName());
-    }
-    
-    @Override
-    public void startCooldown(UUID playerId) {
-        plugin.getCooldownManager().setCooldown(playerId, getName(), getCooldownMillis());
+    protected CompletableFuture<ActivationResult> executeAbility(@NotNull Player player, @NotNull ActivationContext context) {
+        // Execute on main thread
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            Vector direction = player.getLocation().getDirection();
+            direction.multiply(2).setY(0.5);
+            player.setVelocity(direction);
+
+            // Spawn fire particles using PacketEvents
+            // ... particle code here ...
+        });
+
+        sendActivationMessage(player, "Blazing forward!");
+        return CompletableFuture.completedFuture(ActivationResult.success());
     }
 }
 ```
 
 ### Registering Your Ability
 
+In your plugin's `onEnable()`:
+
 ```java
+
 @Override
 public void onEnable() {
     Smite smitePlugin = (Smite) Bukkit.getPluginManager().getPlugin("Smite");
-    
-    MyCustomAbility ability = new MyCustomAbility();
-    smitePlugin.getAbilityRegistry().register(ability);
+    if (smitePlugin != null) {
+        smitePlugin.getAbilityManager().registerAbility(new FireDashAbility(smitePlugin));
+    }
 }
 ```
 
-### Using Particle Builder
+## API Reference
+
+### Core Interfaces
+
+#### Ability
+
+The main interface for all abilities. Implement this or extend `AbstractAbility`.
+
+**Key Methods:**
+
+- `String getId()` - Unique identifier
+- `String getDisplayName()` - Display name
+- `int getCooldown()` - Cooldown in seconds
+- `boolean canActivate(Player, ActivationContext)` - Check if you can activate
+- `CompletableFuture<ActivationResult> activate(Player, ActivationContext)` - Execute ability
+
+#### AbstractAbility
+
+Abstract base class providing common functionality:
+
+- Automatic cooldown management
+- Built-in title/action bar messaging
+- Asynchronous execution support
+
+### AbilityManager
+
+Manages all registered abilities and player data.
 
 ```java
-new ParticleBuilder(plugin.getPacketHandler())
-    .particle(ParticleTypes.FLAME)
-    .location(player.getLocation())
-    .count(20)
-    .offset(0.5, 0.5, 0.5)
-    .speed(0.1)
-    .spawn();
+AbilityManager manager = plugin.getAbilityManager();
+
+// Register an ability
+manager.
+
+registerAbility(new MyAbility(plugin));
+
+// Get an ability
+Ability ability = manager.getAbility("ability_id");
+
+// Activate an ability
+ActivationContext context = new ActivationContext(ActivationTrigger.MANUAL);
+manager.
+
+activateAbility(player, "ability_id",context);
+
+// Get player data
+PlayerAbilityData data = manager.getPlayerData(player);
+data.
+
+setData("custom_key",value);
 ```
 
-### Listening to Ability Events
+### ActivationContext
+
+Provides context for ability activation:
 
 ```java
-@EventHandler
-public void onAbilityActivate(AbilityActivateEvent event) {
-    Player player = event.getPlayer();
-    Ability ability = event.getAbility();
-    
-    // Your logic here
-    
-    // Cancel activation if needed
-    event.setCancelled(true);
+ActivationContext context = new ActivationContext(ActivationTrigger.COMBAT);
+context.
+
+setTarget(targetEntity);
+context.
+
+setData("damage",10.0);
+
+// Retrieve data
+Entity target = context.getTarget();
+Double damage = context.getData("damage", Double.class);
+```
+
+### AbilityType
+
+Enum for categorizing abilities:
+
+- `OFFENSIVE` - Damage-dealing abilities
+- `DEFENSIVE` - Protective abilities
+- `UTILITY` - Support abilities
+- `MOVEMENT` - Movement-based abilities
+- `HYBRID` - Combination abilities
+
+### CooldownManager
+
+Manages ability cooldowns:
+
+```java
+CooldownManager cooldowns = manager.getCooldownManager();
+
+// Set cooldown
+cooldowns.
+
+setCooldown(player, ability, 45);
+
+// Check cooldown
+boolean onCooldown = cooldowns.isOnCooldown(player, ability);
+
+// Get remaining time
+long remaining = cooldowns.getRemainingCooldown(player, ability);
+
+// Clear cooldown
+cooldowns.
+
+clearCooldown(player, ability);
+```
+
+## Using PacketEvents for Effects
+
+PacketEvents allows for high-performance, client-side particle effects:
+
+```java
+import com.github.retrooper.packetevents.PacketEvents;
+import com.github.retrooper.packetevents.protocol.particle.type.ParticleTypes;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerParticle;
+import io.github.retrooper.packetevents.util.SpigotConversionUtil;
+
+// Create particle packet
+WrapperPlayServerParticle packet = new WrapperPlayServerParticle(
+        ParticleTypes.FLAME,           // Particle type
+        true,                          // Long distance
+        SpigotConversionUtil.fromBukkitVector(location.toVector()),
+        new Vector3f(0, 0, 0),        // Offset
+        0.1f,                         // Speed
+        10                            // Count
+);
+
+// Send to player
+PacketEvents.
+
+        getAPI().
+
+        getPlayerManager().
+
+        sendPacket(player, packet);
+```
+
+## Advanced Features
+
+### Asynchronous Processing
+
+All abilities support asynchronous execution:
+
+```java
+
+@Override
+private CompletableFuture<ActivationResult> executeAbility(@NotNull Player player, @NotNull ActivationContext context) {
+    return CompletableFuture.supplyAsync(() -> {
+        // Heavy computation here
+        return ActivationResult.success();
+    });
 }
 ```
 
----
+### Player Data Storage
 
-## 📊 Performance
+Store custom data per player:
 
-Smite is built with performance as the top priority:
+```java
+PlayerAbilityData data = manager.getPlayerData(player);
 
-- **Packet-based rendering**: Direct NMS packets for particles and sounds
-- **Efficient cooldown tracking**: O(1) lookups with automatic cleanup
-- **Async operations**: Configuration and non-critical tasks run async
-- **Memory optimized**: WeakHashMaps and scheduled cleanup prevent leaks
-- **Zero deprecated APIs**: Future-proof implementation
+// Store data
+data.
 
-**Benchmark Results** (100 players, constant ability usage):
-- TPS Impact: < 0.1
-- Memory Overhead: ~5MB
-- CPU Usage: < 2%
+setData("combo_count",5);
+data.
 
----
+setData("last_ability","fire_dash");
 
-## 🐛 Troubleshooting
+// Retrieve data
+Integer comboCount = (Integer) data.getData("combo_count");
 
-### Abilities not triggering
-- Check permissions with `/lp user <name> permission check smite.ability.*`
-- Verify ability is enabled in `config.yml`
-- Check console for errors
+// Track active ability
+data.
 
-### Particles not showing
-- Ensure particle radius is sufficient (`config.yml` > `performance.particle-radius`)
-- Check client particle settings
-- Verify Paper version is 1.21.11+
+setActiveAbility("heavenly_smite");
 
-### Cooldowns not persisting
-- Enable `persist-on-restart: true` in `config.yml`
-- Check file permissions for `cooldowns.yml`
+Optional<String> active = data.getActiveAbility();
+```
 
----
+### Custom Activation Triggers
 
-## 🤝 Contributing
+Define when abilities activate:
 
-Contributions are welcome! Please:
+```java
+public enum ActivationTrigger {
+    MANUAL,         // Player command
+    COMBAT,         // Combat action
+    CRITICAL_HIT,   // Critical hit
+    DAMAGE_TAKEN,   // Taking damage
+    KILL,           // Killing an entity
+    CUSTOM          // Your custom trigger
+}
+```
 
-1. Fork the repository
-2. Create a feature branch
-3. Follow existing code style (Javadoc required)
-4. Test thoroughly
-5. Submit a pull request
+## Configuration
 
----
+`config.yml`:
 
-## 📄 License
+```yaml
+abilities:
+  heavenly_smite:
+    enabled: true
+    cooldown: 45
+    damage: 10.0
+    required_crits: 3
+    crit_chain_timeout: 3000
 
-This project is licensed under the MIT License - see LICENSE file for details.
+  demonic_spark:
+    enabled: true
+    cooldown: 45
+    duration: 5
 
----
+particles:
+  use_packets: true
+  max_distance: 64
 
-## 👤 Author
+performance:
+  async_processing: true
+  thread_pool_size: 4
+```
 
-**SunMC**
-- Website: https://sunmc.me
-- GitHub: @sun-mc-dev
+## Dependencies
 
----
+- **Paper API** 1.21.11+
+- **PacketEvents** 2.7.0
+- **Java** 21
 
-## 🙏 Acknowledgments
+## Performance Considerations
 
-- Paper team for excellent server software
-- Kyori Adventure for text components
-- Minecraft community for inspiration
+1. **Packet-based particles**: More efficient than spawning actual particles
+2. **Asynchronous execution**: Heavy computations don't block main thread
+3. **Efficient cooldown tracking**: O(1) lookups using hash maps
+4. **Minimal memory footprint**: Player data cleaned on disconnect
 
----
+## License
 
-## 📚 Additional Resources
+This plugin is provided as-is for educational and commercial use.
 
-- [Paper API Documentation](https://jd.papermc.io/)
-- [MiniMessage Documentation](https://docs.advntr.dev/minimessage/)
-- [Plugin Development Guide](https://docs.papermc.io/paper/dev/getting-started)
+## Support
 
----
+For issues, feature requests, or questions:
 
-**Version**: 1.0
-**Last Updated**: January 2026  
-**MC Version**: 1.21.11
+- Check the [API Documentation](#api-reference)
+- Review example abilities in `src/main/java/me/sunmc/smite/ability/impl/`
+- Open an issue on GitHub
+
+## Credits
+
+Developed by SunMC with 5+ years of Java experience for Minecraft Paper servers.

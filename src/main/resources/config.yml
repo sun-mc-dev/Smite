@@ -1,133 +1,29 @@
-# ========================================
-#           Smite Configuration
-# ========================================
-# High-performance ability system for Paper 1.21.1
-# Documentation: https://github.com/sunmc/smite
-
-plugin:
-  # Enable debug logging for troubleshooting
-  debug: false
-
-  # Language code for messages (future use)
-  language: "en_US"
-
-# ========================================
-#          Ability Configurations
-# ========================================
+# Smite Plugin Configuration
+# High-performance ability system for Paper 1.21.11
 
 abilities:
-  # Heavenly Smite - Lightning strike triggered by crit chains
-  heavenly-smite:
-    # Whether this ability is enabled
+  heavenly_smite:
     enabled: true
+    cooldown: 45  # seconds
+    damage: 10.0  # 5 hearts
+    required_crits: 3
+    crit_chain_timeout: 3000  # milliseconds
 
-    # Cooldown in seconds
-    cooldown: 45
-
-    # Number of consecutive crits required to trigger
-    required-crits: 3
-
-    # Damage dealt by the lightning bolt (10.0 = 5 hearts)
-    damage: 10.0
-
-    # Whether damage ignores armor
-    ignore-armor: true
-
-    # Particle effect settings
-    particles:
-      # Particles shown for each crit in the chain
-      per-crit:
-        type: "CRIT"
-        count: 15
-        radius: 1.0
-
-      # Particles shown on the final crit
-      final-burst:
-        type: "ELECTRIC_SPARK"
-        count: 50
-        radius: 2.5
-
-    # Lightning bolt settings
-    lightning:
-      # Whether to spawn a visual lightning bolt
-      spawn: true
-
-      # Whether the lightning bolt should damage the entity
-      # (false recommended - ability damage is applied separately)
-      damage-entity: false
-
-  # Demonic Spark - Damage accumulation and burst ability
-  demonic-spark:
-    # Whether this ability is enabled
+  demonic_spark:
     enabled: true
+    cooldown: 45  # seconds
+    duration: 5  # seconds to store damage
 
-    # Cooldown in seconds
-    cooldown: 45
+# Particle settings
+particles:
+  # Use packet-based particles for better performance
+  use_packets: true
+  # Maximum particle distance (blocks)
+  max_distance: 64
 
-    # Duration of accumulation phase in seconds
-    duration: 5
-
-    # Damage multiplier for the finisher hit
-    # 1.0 = 100% of accumulated damage
-    # 1.5 = 150% of accumulated damage
-    damage-multiplier: 1.0
-
-    # Whether to prevent normal damage during accumulation
-    # (true = damage is stored, not dealt immediately)
-    prevent-damage: true
-
-    # Particle effect settings
-    particles:
-      # Particles shown during each hit in accumulation phase
-      accumulation:
-        type: "DAMAGE_INDICATOR"
-        count: 10
-        pattern: "diagonal"
-
-      # Particles shown on finisher hit
-      finisher:
-        type: "DAMAGE_INDICATOR"
-        count: 100
-        pattern: "x-shape"
-        # Colors for particle effects (red and black)
-        colors:
-          - "#FF0000"
-          - "#000000"
-
-    # Sound effect settings
-    sounds:
-      # Sound played during accumulation hits
-      accumulation: "ENTITY_WITHER_HURT"
-
-      # Sound played on finisher hit
-      finisher: "ENTITY_WITHER_DEATH"
-
-# ========================================
-#         Cooldown Management
-# ========================================
-
-cooldowns:
-  # Whether to save cooldowns across server restarts
-  # If true, players will keep their cooldowns after restart
-  persist-on-restart: true
-
-  # Format for displaying cooldown time to players
-  # Placeholders: {time} = remaining seconds
-  display-format: "&cCooldown: &e{time}s"
-
-# ========================================
-#         Performance Settings
-# ========================================
-
+# Performance settings
 performance:
-  # Radius for particle visibility (in blocks)
-  # Players outside this radius won't see particles
-  particle-radius: 48.0
-
-  # Maximum number of particles per effect
-  # Helps prevent lag on lower-end servers
-  max-particles-per-effect: 100
-
-  # Whether to send particles asynchronously
-  # (experimental - may improve performance)
-  async-particles: false
+  # Use async processing when possible
+  async_processing: true
+  # Thread pool size for async tasks
+  thread_pool_size: 4
