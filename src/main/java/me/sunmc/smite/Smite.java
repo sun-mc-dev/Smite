@@ -13,6 +13,8 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.Objects;
+
 public final class Smite extends JavaPlugin {
 
     private static Smite instance;
@@ -35,20 +37,13 @@ public final class Smite extends JavaPlugin {
 
         long startTime = System.currentTimeMillis();
 
-        // Initialize PacketEvents
         PacketEvents.getAPI().init();
 
-        // Initialize managers
         this.configManager = new ConfigManager(this);
         this.abilityManager = new AbilityManager(this);
 
-        // Register abilities
         registerAbilities();
-
-        // Register listeners
         registerListeners();
-
-        // Register commands
         registerCommands();
 
         long loadTime = System.currentTimeMillis() - startTime;
@@ -83,7 +78,8 @@ public final class Smite extends JavaPlugin {
     }
 
     private void registerCommands() {
-        getCommand("smite").setExecutor(new SmiteCommand(this));
+        Objects.requireNonNull(getCommand("smite")).setExecutor(new SmiteCommand(this));
+        Objects.requireNonNull(getCommand("smite")).setTabCompleter(new SmiteCommand(this));
     }
 
     public ConfigManager getConfigManager() {

@@ -53,19 +53,18 @@ public class CombatListener implements Listener {
 
     /**
      * Checks if the player is performing a critical hit.
+     * Critical hits occur when:
+     * - Player is falling (has fall distance)
+     * - Player has negative Y velocity
+     * - Player is not in water
+     * - Player is not climbing
+     * - Player is not sprinting (to avoid sweep attacks)
      */
     private boolean isCriticalHit(@NotNull Player player) {
-        // Critical hit conditions in Minecraft:
-        // 1. Player is falling (negative Y velocity)
-        // 2. Player is not on ground
-        // 3. Player is not in liquid
-        // 4. Player is not climbing
-        // 5. Player is not sprinting (for sweep attacks)
-
         return player.getFallDistance() > 0
-                && !player.isOnGround()
                 && !player.isInWater()
                 && !player.isClimbing()
+                && !player.isSprinting()
                 && player.getVelocity().getY() < 0;
     }
 }

@@ -1,9 +1,11 @@
 package me.sunmc.smite.ability.impl;
 
 import com.github.retrooper.packetevents.PacketEvents;
+import com.github.retrooper.packetevents.protocol.particle.Particle;
 import com.github.retrooper.packetevents.protocol.particle.type.ParticleTypes;
+import com.github.retrooper.packetevents.util.Vector3d;
+import com.github.retrooper.packetevents.util.Vector3f;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerParticle;
-import io.github.retrooper.packetevents.util.SpigotConversionUtil;
 import me.sunmc.smite.Smite;
 import me.sunmc.smite.ability.AbilityManager;
 import me.sunmc.smite.ability.api.AbilityType;
@@ -43,6 +45,24 @@ public class HeavenlySmiteAbility extends AbstractAbility {
                 "A powerful lightning strike triggered by landing three critical hits in succession",
                 AbilityType.OFFENSIVE
         );
+    }
+
+    private static @NotNull WrapperPlayServerParticle getWrapperPlayServerParticle(@NotNull Location center, int i) {
+        double angle = (2 * Math.PI * i) / 60;
+        double radius = 2.0;
+        double x = center.getX() + radius * Math.cos(angle);
+        double z = center.getZ() + radius * Math.sin(angle);
+        double y = center.getY() + 1.0;
+
+        WrapperPlayServerParticle packet = new WrapperPlayServerParticle(
+                (Particle<?>) ParticleTypes.ELECTRIC_SPARK,
+                true,
+                new Vector3d(x, y, z),
+                new Vector3f((float) (Math.cos(angle) * 0.5), 0.1f, (float) (Math.sin(angle) * 0.5)),
+                0.2f,
+                3
+        );
+        return packet;
     }
 
     /**
@@ -147,9 +167,9 @@ public class HeavenlySmiteAbility extends AbstractAbility {
                 double y = loc.getY() + 2.0 - (0.1 * i); // Cascade downward
 
                 WrapperPlayServerParticle packet = new WrapperPlayServerParticle(
-                        ParticleTypes.CRIT,
+                        (Particle<?>) ParticleTypes.CRIT,
                         true,
-                        SpigotConversionUtil.fromBukkitVector(new Vector(x, y, z)),
+                        new Vector3d(x, y, z),
                         new Vector3f(0, 0, 0),
                         0.0f,
                         1
@@ -167,20 +187,7 @@ public class HeavenlySmiteAbility extends AbstractAbility {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             // Circular explosion outward
             for (int i = 0; i < 60; i++) {
-                double angle = (2 * Math.PI * i) / 60;
-                double radius = 2.0;
-                double x = center.getX() + radius * Math.cos(angle);
-                double z = center.getZ() + radius * Math.sin(angle);
-                double y = center.getY() + 1.0;
-
-                WrapperPlayServerParticle packet = new WrapperPlayServerParticle(
-                        ParticleTypes.ELECTRIC_SPARK,
-                        true,
-                        SpigotConversionUtil.fromBukkitVector(new Vector(x, y, z)),
-                        new Vector3f((float) (Math.cos(angle) * 0.5), 0.1f, (float) (Math.sin(angle) * 0.5)),
-                        0.2f,
-                        3
-                );
+                final WrapperPlayServerParticle packet = getWrapperPlayServerParticle(center, i);
 
                 PacketEvents.getAPI().getPlayerManager().sendPacket(player, packet);
             }
@@ -191,13 +198,13 @@ public class HeavenlySmiteAbility extends AbstractAbility {
                 double offsetZ = (Math.random() - 0.5) * 2;
 
                 WrapperPlayServerParticle packet = new WrapperPlayServerParticle(
-                        ParticleTypes.CRIT,
+                        (Particle<?>) ParticleTypes.CRIT,
                         true,
-                        SpigotConversionUtil.fromBukkitVector(new Vector(
+                        new Vector3d(
                                 center.getX() + offsetX,
                                 center.getY() + 1.0,
                                 center.getZ() + offsetZ
-                        )),
+                        ),
                         new Vector3f((float) offsetX * 0.2f, 0.5f, (float) offsetZ * 0.2f),
                         0.3f,
                         2
@@ -206,9 +213,5 @@ public class HeavenlySmiteAbility extends AbstractAbility {
                 PacketEvents.getAPI().getPlayerManager().sendPacket(player, packet);
             }
         });
-    }
-
-    // Helper class for Vector
-    private record Vector3f(float x, float y, float z) {
     }
 }
