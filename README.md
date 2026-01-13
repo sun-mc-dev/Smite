@@ -1,44 +1,61 @@
 # Smite - High-Performance Ability Plugin
 
-A high-performance, packet-based ability system for Paper 1.21.11 servers with a flexible API for creating custom
-abilities.
+A high-performance, packet-based ability system for Paper 1.21.11 servers with a flexible Cell-based API, persistent SQLite storage, and keybind support.
 
 ## Features
 
-- ⚡ **High Performance**: Packet-based particle effects and asynchronous processing
-- 🎨 **Client-Side Effects**: All GUI, titles, and action bars are client-based using PacketEvents
-- 🔧 **Flexible API**: Easy-to-use API for creating custom abilities
+- ⚡ **High Performance**: Packet-based particle effects, GUIs, and asynchronous processing
+- 🔐 **Cell System**: Players select one permanent Cell containing two abilities
+- 🗄️ **SQLite Database**: Persistent player data and keybind storage
+- ⌨️ **Keybind Support**: Customizable keybinds for abilities
+- 🎨 **Packet-Based GUIs**: Client-side inventory rendering using PacketEvents
 - 🎯 **Zero Deprecated Methods**: Uses only modern Paper API methods
 - 🌟 **Adventure API**: Modern text formatting using Adventure API
 - ☕ **Java 21**: Built with modern Java features
+
+## Cell System
+
+### What are Cells?
+
+Cells are permanent ability containers that players must choose when they first join. Each Cell contains exactly **two abilities**. Once a player selects a Cell, **they cannot change it**.
+
+### Available Cells
+
+#### Spark Cell
+**Abilities:**
+- **Heavenly Smite** - Lightning-based ability triggered by critical hits
+- **Demonic Spark** - Damage storage and release ability
 
 ## Included Abilities
 
 ### Heavenly Smite
 
-**Cooldown:** 45 seconds
+**Cooldown:** 45 seconds  
+**Damage:** 10.0 (5 hearts)  
+**Type:** Offensive
 
-A lightning-based ability triggered by landing three critical hits in succession. Each strike deals 5 hearts (10.0
-damage) bypassing armor entirely. Features cascading circular particles during critical hits and a dramatic explosion
-effect on activation.
+A lightning-based ability triggered by landing three critical hits in succession. Each strike deals 5 hearts (10.0 damage) bypassing armor entirely. Features cascading circular particles during critical hits and a dramatic explosion effect on activation.
 
-**Activation:** Land 3 critical hits within 3 seconds
+**Activation:** Land 3 critical hits within 3 seconds  
+**Default Keybind:** R
 
 ### Demonic Spark
 
-**Cooldown:** 45 seconds
+**Cooldown:** 45 seconds  
+**Duration:** 5 seconds  
+**Type:** Hybrid
 
-Temporarily disables damage output for 5 seconds while storing all damage dealt. After the duration ends, unleashes all
-stored damage in a single devastating strike with a massive X-shaped slash effect.
+Temporarily disables damage output for 5 seconds while storing all damage dealt. After the duration ends, unleashes all stored damage in a single devastating strike with a massive X-shaped slash effect.
 
-**Activation:** Manual activation via command or custom trigger
+**Activation:** Manual activation  
+**Default Keybind:** F
 
 ## Installation
 
 1. Download the plugin JAR
 2. Place in your server's `plugins` folder
 3. Restart your server
-4. Configure in `plugins/Smite/config.yml`
+4. Players will be prompted to select a Cell on first join
 
 ## Building from Source
 
@@ -48,15 +65,18 @@ stored damage in a single devastating strike with a massive X-shaped slash effec
 mvn clean package
 ```
 
-The compiled JAR will be in `target/` (Maven).
+The compiled JAR will be in `target/` directory.
 
 ## Commands
 
 | Command                                    | Description                  | Permission    |
 |--------------------------------------------|------------------------------|---------------|
+| `/smite select`                            | Open cell selection GUI      | `smite.use`   |
+| `/smite cells`                             | List all available cells     | `smite.use`   |
 | `/smite list`                              | List all abilities           | `smite.use`   |
 | `/smite activate <ability>`                | Manually activate an ability | `smite.use`   |
 | `/smite info <ability>`                    | Show ability information     | `smite.use`   |
+| `/smite keybind <ability> <key>`           | Set ability keybind          | `smite.use`   |
 | `/smite cooldown <player> <ability> clear` | Clear a cooldown             | `smite.admin` |
 | `/smite reload`                            | Reload configuration         | `smite.admin` |
 
@@ -67,11 +87,25 @@ The compiled JAR will be in `target/` (Maven).
 - `smite.reload` - Reload config (default: op)
 - `smite.cooldown` - Manage cooldowns (default: op)
 
-## Creating Custom Abilities
+## Keybinds
 
-The Smite API makes it easy to create custom abilities. Here's a complete example:
+Players can set custom keybinds for their abilities using `/smite keybind <ability> <key>`.
 
-### Example: Fire Dash Ability
+**Default Keybinds:**
+- First ability in cell: `KEY_R` (R key)
+- Second ability in cell: `KEY_F` (F key)
+
+**Note:** Due to Minecraft limitations, keybinds work through packet detection. Players can activate abilities by:
+1. Sneaking (Shift) + using the assigned key
+2. Using `/smite activate <ability>`
+
+## Creating Custom Cells
+
+The Cell API makes it easy to create custom ability combinations. Here's how:
+
+### 1. Create Your Abilities
+
+First, create your custom abilities by extending `AbstractAbility`:
 
 ```java
 package com.example.abilities;
@@ -81,255 +115,158 @@ import me.sunmc.smite.ability.api.AbstractAbility;
 import me.sunmc.smite.ability.api.AbilityType;
 import me.sunmc.smite.ability.api.ActivationContext;
 import me.sunmc.smite.ability.api.ActivationResult;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
-import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.CompletableFuture;
 
-public class FireDashAbility extends AbstractAbility {
+public class IceShardAbility extends AbstractAbility {
 
-    public FireDashAbility(@NotNull Smite plugin) {
+    public IceShardAbility(@NotNull Smite plugin) {
         super(
                 plugin,
-                "fire_dash",                    // Unique ID
-                "Fire Dash",                    // Display name
-                30,                             // Cooldown in seconds
-                "Dash forward in flames",       // Description
-                AbilityType.MOVEMENT            // Ability type
+                "ice_shard",           // Unique ID
+                "Ice Shard",            // Display name
+                30,                     // Cooldown in seconds
+                "Launch deadly ice shards at enemies",
+                AbilityType.OFFENSIVE
         );
     }
 
     @Override
     protected boolean canActivateCustom(@NotNull Player player, @NotNull ActivationContext context) {
-        // Custom activation checks
-        return player.isOnGround();
+        return true;
     }
 
     @Override
     protected CompletableFuture<ActivationResult> executeAbility(@NotNull Player player, @NotNull ActivationContext context) {
-        // Execute on main thread
-        Bukkit.getScheduler().runTask(plugin, () -> {
-            Vector direction = player.getLocation().getDirection();
-            direction.multiply(2).setY(0.5);
-            player.setVelocity(direction);
-
-            // Spawn fire particles using PacketEvents
-            // ... particle code here ...
-        });
-
-        sendActivationMessage(player, "Blazing forward!");
+        // Your ability logic here
+        sendActivationMessage(player, "Ice shards launched!");
         return CompletableFuture.completedFuture(ActivationResult.success());
     }
 }
 ```
 
-### Registering Your Ability
+### 2. Register Your Cell
 
-In your plugin's `onEnable()`:
+In your plugin's `onEnable()` or Smite's main class:
 
 ```java
+// Register abilities
+plugin.getAbilityManager().registerAbility(new IceShardAbility(plugin));
+plugin.getAbilityManager().registerAbility(new FrozenHeartAbility(plugin));
 
-@Override
-public void onEnable() {
-    Smite smitePlugin = (Smite) Bukkit.getPluginManager().getPlugin("Smite");
-    if (smitePlugin != null) {
-        smitePlugin.getAbilityManager().registerAbility(new FireDashAbility(smitePlugin));
-    }
-}
+// Create and register cell
+Cell frostCell = new Cell(
+        "frost_cell",               // Unique ID
+        "Frost Cell",               // Display name
+        "Control ice and freeze your enemies",
+        "ice_shard",                // First ability ID
+        "frozen_heart",             // Second ability ID
+        "ICE",                      // Icon material
+        true                        // Enabled
+);
+
+plugin.getCellManager().registerCell(frostCell);
 ```
 
 ## API Reference
 
 ### Core Interfaces
 
-#### Ability
+#### Cell
 
-The main interface for all abilities. Implement this or extend `AbstractAbility`.
+Represents a container of two abilities.
 
 **Key Methods:**
-
 - `String getId()` - Unique identifier
 - `String getDisplayName()` - Display name
-- `int getCooldown()` - Cooldown in seconds
-- `boolean canActivate(Player, ActivationContext)` - Check if you can activate
-- `CompletableFuture<ActivationResult> activate(Player, ActivationContext)` - Execute ability
+- `List<String> getAbilityIds()` - Get both ability IDs
+- `String getFirstAbilityId()` - Get first ability
+- `String getSecondAbilityId()` - Get second ability
+- `boolean containsAbility(String)` - Check if cell has ability
 
-#### AbstractAbility
+#### CellManager
 
-Abstract base class providing common functionality:
-
-- Automatic cooldown management
-- Built-in title/action bar messaging
-- Asynchronous execution support
-
-### AbilityManager
-
-Manages all registered abilities and player data.
+Manages all registered cells.
 
 ```java
-AbilityManager manager = plugin.getAbilityManager();
+CellManager manager = plugin.getCellManager();
 
-// Register an ability
-manager.
+// Register a cell
+manager.registerCell(new Cell(...));
 
-registerAbility(new MyAbility(plugin));
+// Get a cell
+Cell cell = manager.getCell("cell_id");
 
-// Get an ability
-Ability ability = manager.getAbility("ability_id");
+// Get all cells
+Collection<Cell> cells = manager.getAllCells();
 
-// Activate an ability
-ActivationContext context = new ActivationContext(ActivationTrigger.MANUAL);
-manager.
-
-activateAbility(player, "ability_id",context);
-
-// Get player data
-PlayerAbilityData data = manager.getPlayerData(player);
-data.
-
-setData("custom_key",value);
+// Find cell by ability
+Cell cell = manager.findCellByAbility("ability_id");
 ```
 
-### ActivationContext
+### Database System
 
-Provides context for ability activation:
+#### DatabaseManager
 
-```java
-ActivationContext context = new ActivationContext(ActivationTrigger.COMBAT);
-context.
-
-setTarget(targetEntity);
-context.
-
-setData("damage",10.0);
-
-// Retrieve data
-Entity target = context.getTarget();
-Double damage = context.getData("damage", Double.class);
-```
-
-### AbilityType
-
-Enum for categorizing abilities:
-
-- `OFFENSIVE` - Damage-dealing abilities
-- `DEFENSIVE` - Protective abilities
-- `UTILITY` - Support abilities
-- `MOVEMENT` - Movement-based abilities
-- `HYBRID` - Combination abilities
-
-### CooldownManager
-
-Manages ability cooldowns:
+Handles persistent data storage.
 
 ```java
-CooldownManager cooldowns = manager.getCooldownManager();
+DatabaseManager db = plugin.getDatabaseManager();
 
-// Set cooldown
-cooldowns.
+// Save player data
+db.savePlayerData(player, "spark_cell", true);
 
-setCooldown(player, ability, 45);
-
-// Check cooldown
-boolean onCooldown = cooldowns.isOnCooldown(player, ability);
-
-// Get remaining time
-long remaining = cooldowns.getRemainingCooldown(player, ability);
-
-// Clear cooldown
-cooldowns.
-
-clearCooldown(player, ability);
-```
-
-## Using PacketEvents for Effects
-
-PacketEvents allows for high-performance, client-side particle effects:
-
-```java
-import com.github.retrooper.packetevents.PacketEvents;
-import com.github.retrooper.packetevents.protocol.particle.type.ParticleTypes;
-import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerParticle;
-import io.github.retrooper.packetevents.util.SpigotConversionUtil;
-
-// Create particle packet
-WrapperPlayServerParticle packet = new WrapperPlayServerParticle(
-        ParticleTypes.FLAME,           // Particle type
-        true,                          // Long distance
-        SpigotConversionUtil.fromBukkitVector(location.toVector()),
-        new Vector3f(0, 0, 0),        // Offset
-        0.1f,                         // Speed
-        10                            // Count
-);
-
-// Send to player
-PacketEvents.
-
-        getAPI().
-
-        getPlayerManager().
-
-        sendPacket(player, packet);
-```
-
-## Advanced Features
-
-### Asynchronous Processing
-
-All abilities support asynchronous execution:
-
-```java
-
-@Override
-private CompletableFuture<ActivationResult> executeAbility(@NotNull Player player, @NotNull ActivationContext context) {
-    return CompletableFuture.supplyAsync(() -> {
-        // Heavy computation here
-        return ActivationResult.success();
+// Load player data
+db.loadPlayerData(player.getUniqueId())
+    .thenAccept(data -> {
+        // Use data
     });
-}
+
+// Save keybind
+db.saveKeybind(player.getUniqueId(), "ability_id", "KEY_R");
+
+// Load keybind
+db.loadKeybind(player.getUniqueId(), "ability_id")
+    .thenAccept(keybind -> {
+        // Use keybind
+    });
 ```
 
-### Player Data Storage
+### Keybind System
 
-Store custom data per player:
+#### KeybindManager
+
+Manages player keybinds.
 
 ```java
-PlayerAbilityData data = manager.getPlayerData(player);
+KeybindManager keybinds = plugin.getKeybindManager();
 
-// Store data
-data.
+// Set keybind
+keybinds.setKeybind(player, "ability_id", "KEY_R");
 
-setData("combo_count",5);
-data.
+// Get keybind
+String keybind = keybinds.getKeybind(player, "ability_id");
 
-setData("last_ability","fire_dash");
-
-// Retrieve data
-Integer comboCount = (Integer) data.getData("combo_count");
-
-// Track active ability
-data.
-
-setActiveAbility("heavenly_smite");
-
-Optional<String> active = data.getActiveAbility();
+// Load keybinds from database
+keybinds.loadKeybinds(player);
 ```
 
-### Custom Activation Triggers
+### GUI System
 
-Define when abilities activate:
+#### PacketGUIManager
+
+Manages packet-based GUIs.
 
 ```java
-public enum ActivationTrigger {
-    MANUAL,         // Player command
-    COMBAT,         // Combat action
-    CRITICAL_HIT,   // Critical hit
-    DAMAGE_TAKEN,   // Taking damage
-    KILL,           // Killing an entity
-    CUSTOM          // Your custom trigger
-}
+PacketGUIManager gui = plugin.getGuiManager();
+
+// Open cell selection GUI
+gui.openCellSelectionGUI(player);
+
+// Close GUI
+gui.closeGUI(player);
 ```
 
 ## Configuration
@@ -357,20 +294,79 @@ particles:
 performance:
   async_processing: true
   thread_pool_size: 4
+
+database:
+  file: "smite.db"
+```
+
+## Database Schema
+
+### player_data Table
+
+| Column        | Type    | Description               |
+|---------------|---------|---------------------------|
+| uuid          | TEXT    | Player UUID (Primary Key) |
+| player_name   | TEXT    | Player name               |
+| selected_cell | TEXT    | Selected cell ID          |
+| cell_locked   | BOOLEAN | Whether cell is permanent |
+| created_at    | INTEGER | Creation timestamp        |
+| updated_at    | INTEGER | Last update timestamp     |
+
+### player_keybinds Table
+
+| Column     | Type | Description    |
+|------------|------|----------------|
+| uuid       | TEXT | Player UUID    |
+| ability_id | TEXT | Ability ID     |
+| keybind    | TEXT | Keybind string |
+
+## Advanced Features
+
+### Packet-Based Systems
+
+The plugin uses PacketEvents for:
+1. **Particles** - Client-side particle rendering
+2. **GUIs** - Inventory rendering without server-side inventories
+3. **Keybind Detection** - Efficient key press detection
+4. **Title/Action Bar** - Client-side text rendering
+
+### Asynchronous Operations
+
+All database operations are asynchronous using `CompletableFuture`:
+
+```java
+plugin.getDatabaseManager().loadPlayerData(uuid)
+    .thenAccept(data -> {
+        // Handle data
+    })
+    .exceptionally(ex -> {
+        // Handle error
+        return null;
+    });
 ```
 
 ## Dependencies
 
 - **Paper API** 1.21.11+
-- **PacketEvents** 2.7.0
+- **PacketEvents** 2.11.1
+- **SQLite JDBC** 3.47.1.0
 - **Java** 21
 
 ## Performance Considerations
 
-1. **Packet-based particles**: More efficient than spawning actual particles
-2. **Asynchronous execution**: Heavy computations don't block main thread
+1. **Packet-based rendering**: More efficient than spawning actual particles
+2. **Asynchronous database**: All I/O operations don't block main thread
 3. **Efficient cooldown tracking**: O(1) lookups using hash maps
-4. **Minimal memory footprint**: Player data cleaned on disconnect
+4. **Client-side GUIs**: No server inventory overhead
+5. **Minimal memory footprint**: Player data cleaned on disconnect
+
+## Roadmap
+
+- [ ] Add more ability cells
+- [ ] Implement ability upgrade system
+- [ ] Add ability combos
+- [ ] Create web dashboard for statistics
+- [ ] Add PvP arenas with ability restrictions
 
 ## License
 
@@ -379,7 +375,6 @@ This plugin is provided as-is for educational and commercial use.
 ## Support
 
 For issues, feature requests, or questions:
-
 - Check the [API Documentation](#api-reference)
 - Review example abilities in `src/main/java/me/sunmc/smite/ability/impl/`
 - Open an issue on GitHub

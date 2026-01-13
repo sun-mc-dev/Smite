@@ -47,7 +47,7 @@ public class ActivationContext {
     @Nullable
     public <T> T getData(@NotNull String key, @NotNull Class<T> type) {
         Object value = data.get(key);
-        if (value != null && type.isInstance(value)) {
+        if (type.isInstance(value)) {
             return (T) value;
         }
         return null;
