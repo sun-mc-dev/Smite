@@ -8,24 +8,32 @@ website: https://github.com/sun-mc-dev/Smite
 
 commands:
   smite:
-    description: Main command for Smite plugin
-    usage: /<command> [list|activate|cooldown|reload|info]
+    description: Main Smite command
+    usage: |-
+      /<command> select - Open cell selection GUI
+      /<command> cells - List all available cells
+      /<command> list - List all abilities
+      /<command> activate <ability> - Manually activate an ability
+      /<command> info <ability> - Show ability information
+      /<command> keybind <ability> <key> - Set ability keybind
+      /<command> cooldown <player> <ability> clear - Clear a cooldown
+      /<command> reload - Reload configuration
     permission: smite.use
-    permission-message: You don't have permission to use this command
+    aliases: [ sm, abilities ]
 
 permissions:
   smite.use:
-    description: Allows use of basic Smite commands
+    description: Allows basic Smite command usage
     default: true
   smite.admin:
-    description: Allows use of admin Smite commands
+    description: Allows admin commands
     default: op
     children:
       smite.use: true
       smite.reload: true
       smite.cooldown: true
   smite.reload:
-    description: Allows reloading the plugin configuration
+    description: Allows reloading the configuration
     default: op
   smite.cooldown:
     description: Allows managing player cooldowns

@@ -33,6 +33,10 @@ public class PacketGUIManager extends PacketListenerAbstract {
     // GUI window IDs
     private static final int CELL_SELECTION_WINDOW_ID = 100;
     private static final int CONFIRMATION_WINDOW_ID = 101;
+
+    // Inventory type constants (for Minecraft 1.14+)
+    private static final int GENERIC_9X3 = 2; // 27 slots, 3 rows
+
     private final Smite plugin;
     private final Map<UUID, GUIType> openGUIs;
     private final Map<UUID, String> pendingCellSelection; // For confirmation GUI
@@ -63,10 +67,10 @@ public class PacketGUIManager extends PacketListenerAbstract {
                         // Create cell selection GUI
                         openGUIs.put(player.getUniqueId(), GUIType.CELL_SELECTION);
 
-                        // Send open window packet
+                        // Send open window packet - FIXED: Use int type instead of enum
                         WrapperPlayServerOpenWindow openPacket = new WrapperPlayServerOpenWindow(
                                 CELL_SELECTION_WINDOW_ID,
-                                WrapperPlayServerOpenWindow.BuiltInInventoryType.GENERIC_9X3,
+                                GENERIC_9X3, // Changed from enum to int
                                 Component.text("Select Your Cell", NamedTextColor.GOLD, TextDecoration.BOLD)
                         );
                         PacketEvents.getAPI().getPlayerManager().sendPacket(player, openPacket);
@@ -154,10 +158,10 @@ public class PacketGUIManager extends PacketListenerAbstract {
         openGUIs.put(player.getUniqueId(), GUIType.CONFIRMATION);
         pendingCellSelection.put(player.getUniqueId(), cellId);
 
-        // Send open window packet
+        // Send open window packet - FIXED: Use int type instead of enum
         WrapperPlayServerOpenWindow openPacket = new WrapperPlayServerOpenWindow(
                 CONFIRMATION_WINDOW_ID,
-                WrapperPlayServerOpenWindow.BuiltInInventoryType.GENERIC_9X3,
+                GENERIC_9X3, // Changed from enum to int
                 Component.text("Confirm Cell Selection", NamedTextColor.RED, TextDecoration.BOLD)
         );
         PacketEvents.getAPI().getPlayerManager().sendPacket(player, openPacket);
@@ -279,7 +283,7 @@ public class PacketGUIManager extends PacketListenerAbstract {
             plugin.getKeybindManager().loadKeybinds(player);
 
             player.sendMessage(Component.text("Cell selected: ", NamedTextColor.GREEN)
-                    .append(Component.text(plugin.getCellManager().getCell(cellId).getDisplayName(), NamedTextColor.GOLD)));
+                    .append(Component.text(Objects.requireNonNull(plugin.getCellManager().getCell(cellId)).getDisplayName(), NamedTextColor.GOLD)));
 
             closeGUI(player);
             pendingCellSelection.remove(player.getUniqueId());
