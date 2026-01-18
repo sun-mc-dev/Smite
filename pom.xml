@@ -14,9 +14,9 @@
     <properties>
         <java.version>21</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <paper.version>1.21.11-R0.1-SNAPSHOT</paper.version>
+        <paper.version>1.21.4-R0.1-SNAPSHOT</paper.version>
         <packetevents.version>2.11.1</packetevents.version>
-        <sqlite.version>3.51.0.0</sqlite.version>
+        <hikari.version>7.0.2</hikari.version>
     </properties>
 
     <build>
@@ -29,6 +29,11 @@
                 <configuration>
                     <source>${java.version}</source>
                     <target>${java.version}</target>
+                    <compilerArgs>
+                        <arg>-parameters</arg>
+                        <arg>-Xlint:unchecked</arg>
+                        <arg>-Xlint:deprecation</arg>
+                    </compilerArgs>
                 </configuration>
             </plugin>
             <plugin>
@@ -42,6 +47,8 @@
                             <goal>shade</goal>
                         </goals>
                         <configuration>
+                            <minimizeJar>true</minimizeJar>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
                             <relocations>
                                 <relocation>
                                     <pattern>com.github.retrooper.packetevents</pattern>
@@ -52,8 +59,8 @@
                                     <shadedPattern>me.sunmc.smite.lib.packetevents.impl</shadedPattern>
                                 </relocation>
                                 <relocation>
-                                    <pattern>org.sqlite</pattern>
-                                    <shadedPattern>me.sunmc.smite.lib.sqlite</shadedPattern>
+                                    <pattern>com.zaxxer.hikari</pattern>
+                                    <shadedPattern>me.sunmc.smite.lib.hikari</shadedPattern>
                                 </relocation>
                             </relocations>
                             <filters>
@@ -63,6 +70,9 @@
                                         <exclude>META-INF/*.SF</exclude>
                                         <exclude>META-INF/*.DSA</exclude>
                                         <exclude>META-INF/*.RSA</exclude>
+                                        <exclude>META-INF/MANIFEST.MF</exclude>
+                                        <exclude>META-INF/maven/**</exclude>
+                                        <exclude>META-INF/versions/**</exclude>
                                     </excludes>
                                 </filter>
                             </filters>
@@ -104,9 +114,9 @@
             <scope>compile</scope>
         </dependency>
         <dependency>
-            <groupId>org.xerial</groupId>
-            <artifactId>sqlite-jdbc</artifactId>
-            <version>${sqlite.version}</version>
+            <groupId>com.zaxxer</groupId>
+            <artifactId>HikariCP</artifactId>
+            <version>${hikari.version}</version>
             <scope>compile</scope>
         </dependency>
     </dependencies>

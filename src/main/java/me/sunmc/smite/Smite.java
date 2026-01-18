@@ -11,7 +11,6 @@ import me.sunmc.smite.command.SmiteCommand;
 import me.sunmc.smite.config.ConfigManager;
 import me.sunmc.smite.database.DatabaseManager;
 import me.sunmc.smite.gui.PacketGUIManager;
-import me.sunmc.smite.keybind.KeybindManager;
 import me.sunmc.smite.listener.CombatListener;
 import me.sunmc.smite.listener.PlayerListener;
 import net.kyori.adventure.text.Component;
@@ -23,18 +22,23 @@ import java.util.Objects;
 
 /**
  * Main plugin class for Smite - High-performance ability system.
+ * Uses modern Java 21 features and best practices.
  */
 public final class Smite extends JavaPlugin {
 
     private static Smite instance;
+
     private ConfigManager configManager;
-    private AbilityManager abilityManager;
-    private CellManager cellManager;
     private DatabaseManager databaseManager;
-    private KeybindManager keybindManager;
+    private CellManager cellManager;
+    private AbilityManager abilityManager;
     private PacketGUIManager guiManager;
 
+    @NotNull
     public static Smite getInstance() {
+        if (instance == null) {
+            throw new IllegalStateException("Plugin not initialized");
+        }
         return instance;
     }
 
@@ -50,58 +54,69 @@ public final class Smite extends JavaPlugin {
 
         long startTime = System.currentTimeMillis();
 
-        PacketEvents.getAPI().init();
+        try {
 
-        this.configManager = new ConfigManager(this);
-        this.databaseManager = new DatabaseManager(this);
-        this.cellManager = new CellManager(this);
-        this.abilityManager = new AbilityManager(this);
-        this.keybindManager = new KeybindManager(this);
-        this.guiManager = new PacketGUIManager(this);
+            PacketEvents.getAPI().init();
 
-        databaseManager.initialize();
+            this.configManager = new ConfigManager(this);
+            this.databaseManager = new DatabaseManager(this);
+            this.cellManager = new CellManager(this);
+            this.abilityManager = new AbilityManager(this);
+            this.guiManager = new PacketGUIManager(this);
 
-        registerAbilities();
-        registerCells();
-        registerListeners();
-        registerCommands();
+            databaseManager.initialize();
 
-        long loadTime = System.currentTimeMillis() - startTime;
-        getServer().getConsoleSender().sendMessage(
-                Component.text("[Smite] ", NamedTextColor.GOLD)
-                        .append(Component.text("Plugin enabled in " + loadTime + "ms", NamedTextColor.GREEN))
-        );
+            registerAbilities();
+            registerCells();
+            registerListeners();
+            registerCommands();
 
-        getServer().getConsoleSender().sendMessage(
-                Component.text("[Smite] ", NamedTextColor.GOLD)
-                        .append(Component.text("Packet-based systems initialized", NamedTextColor.AQUA))
-        );
+            long loadTime = System.currentTimeMillis() - startTime;
+
+            getServer().getConsoleSender().sendMessage(
+                    Component.text("[Smite] ", NamedTextColor.GOLD)
+                            .append(Component.text("Plugin enabled in " + loadTime + "ms", NamedTextColor.GREEN))
+            );
+
+            getServer().getConsoleSender().sendMessage(
+                    Component.text("[Smite] ", NamedTextColor.GOLD)
+                            .append(Component.text("Using Java " + Runtime.version(), NamedTextColor.AQUA))
+            );
+        } catch (Exception e) {
+            getLogger().severe("Failed to enable plugin: " + e.getMessage());
+            e.printStackTrace();
+            getServer().getPluginManager().disablePlugin(this);
+        }
     }
 
     @Override
     public void onDisable() {
-        if (abilityManager != null) {
-            abilityManager.shutdown();
+        try {
+            // Shutdown managers in reverse order
+            if (guiManager != null) {
+                guiManager.shutdown();
+            }
+
+            if (abilityManager != null) {
+                abilityManager.shutdown();
+            }
+
+            if (databaseManager != null) {
+                databaseManager.close();
+            }
+
+            PacketEvents.getAPI().terminate();
+
+            getServer().getConsoleSender().sendMessage(
+                    Component.text("[Smite] ", NamedTextColor.GOLD)
+                            .append(Component.text("Plugin disabled", NamedTextColor.RED))
+            );
+        } catch (Exception e) {
+            getLogger().severe("Error during plugin shutdown: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            instance = null;
         }
-
-        if (keybindManager != null) {
-            keybindManager.shutdown();
-        }
-
-        if (guiManager != null) {
-            guiManager.shutdown();
-        }
-
-        if (databaseManager != null) {
-            databaseManager.close();
-        }
-
-        PacketEvents.getAPI().terminate();
-
-        getServer().getConsoleSender().sendMessage(
-                Component.text("[Smite] ", NamedTextColor.GOLD)
-                        .append(Component.text("Plugin disabled", NamedTextColor.RED))
-        );
     }
 
     /**
@@ -116,7 +131,6 @@ public final class Smite extends JavaPlugin {
      * Registers all cells.
      */
     private void registerCells() {
-        // Spark Cell - Contains Heavenly Smite and Demonic Spark
         Cell sparkCell = new Cell(
                 "spark_cell",
                 "Spark Cell",
@@ -134,16 +148,18 @@ public final class Smite extends JavaPlugin {
      * Registers event listeners.
      */
     private void registerListeners() {
-        getServer().getPluginManager().registerEvents(new CombatListener(this), this);
-        getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
+        var pluginManager = getServer().getPluginManager();
+        pluginManager.registerEvents(new CombatListener(this), this);
+        pluginManager.registerEvents(new PlayerListener(this), this);
     }
 
     /**
      * Registers commands.
      */
     private void registerCommands() {
-        Objects.requireNonNull(getCommand("smite")).setExecutor(new SmiteCommand(this));
-        Objects.requireNonNull(getCommand("smite")).setTabCompleter(new SmiteCommand(this));
+        var smiteCommand = new SmiteCommand(this);
+        Objects.requireNonNull(getCommand("smite")).setExecutor(smiteCommand);
+        Objects.requireNonNull(getCommand("smite")).setTabCompleter(smiteCommand);
     }
 
     @NotNull
@@ -164,11 +180,6 @@ public final class Smite extends JavaPlugin {
     @NotNull
     public DatabaseManager getDatabaseManager() {
         return databaseManager;
-    }
-
-    @NotNull
-    public KeybindManager getKeybindManager() {
-        return keybindManager;
     }
 
     @NotNull

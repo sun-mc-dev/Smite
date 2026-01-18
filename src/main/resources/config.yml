@@ -1,5 +1,5 @@
 # Smite Plugin Configuration
-# High-performance ability system for Paper 1.21.11
+# High-performance ability system for Paper 1.21.11+
 # Version: 1.0 by SunMC
 
 # ====================================
@@ -15,16 +15,6 @@ cells:
       - "heavenly_smite"
       - "demonic_spark"
 
-  # Add more cells here in the future
-  # frost_cell:
-  #   enabled: false
-  #   display_name: "Frost Cell"
-  #   description: "Control ice and freeze your enemies"
-  #   icon_material: "ICE"
-  #   abilities:
-  #     - "ice_shard"
-  #     - "frozen_heart"
-
 # ====================================
 # ABILITY CONFIGURATION
 # ====================================
@@ -35,13 +25,11 @@ abilities:
     damage: 10.0  # 5 hearts
     required_crits: 3
     crit_chain_timeout: 3000  # milliseconds
-    default_keybind: "KEY_R"
 
   demonic_spark:
     enabled: true
     cooldown: 45  # seconds
     duration: 5  # seconds to store damage
-    default_keybind: "KEY_F"
 
 # ====================================
 # PARTICLE CONFIGURATION
@@ -72,30 +60,24 @@ gui:
     warning_message: "This choice is PERMANENT!"
 
 # ====================================
-# KEYBIND CONFIGURATION
-# ====================================
-keybinds:
-  # Enable keybind system
-  enabled: true
-  # Default keybinds for abilities
-  defaults:
-    ability_1: "KEY_R"
-    ability_2: "KEY_F"
-  # Keybind detection debounce time (ms)
-  debounce_time: 300
-
-# ====================================
 # DATABASE CONFIGURATION
 # ====================================
 database:
   # Database file name
   file: "smite.db"
-  # Auto-save interval (seconds, 0 = disable)
-  auto_save_interval: 300
+  # Connection pool settings (HikariCP)
+  pool:
+    maximum_pool_size: 10
+    minimum_idle: 2
+    connection_timeout: 30000  # milliseconds
+    idle_timeout: 600000  # milliseconds
+    max_lifetime: 1800000  # milliseconds
   # Enable database backups
   enable_backups: true
   # Maximum number of backups to keep
   max_backups: 5
+  # Backup interval (seconds, 0 = manual only)
+  backup_interval: 3600
 
 # ====================================
 # PERFORMANCE CONFIGURATION
@@ -103,8 +85,8 @@ database:
 performance:
   # Use async processing when possible
   async_processing: true
-  # Thread pool size for async tasks
-  thread_pool_size: 4
+  # Use virtual threads (Java 21)
+  use_virtual_threads: true
   # Cache player data in memory
   cache_player_data: true
   # Cache timeout (seconds)
@@ -135,9 +117,11 @@ messages:
   ability_activated: "&6{ability} &aactivated!"
   ability_on_cooldown: "&c{ability} is on cooldown: &e{time}s"
   ability_not_in_cell: "&cThis ability is not in your cell!"
-  # Keybind messages
-  keybind_set: "&aKeybind set: &6{ability} &7→ &b{key}"
-  invalid_keybind: "&cInvalid keybind! Use KEY_R or KEY_F"
+  ability_not_found: "&cAbility not found!"
+  # Error messages
+  no_permission: "&cYou don't have permission to do that!"
+  player_only: "&cOnly players can use this command!"
+  invalid_usage: "&cInvalid usage! Check /smite help"
 
 # ====================================
 # DEBUG CONFIGURATION
@@ -151,6 +135,8 @@ debug:
   log_database: false
   # Log ability activations
   log_abilities: false
+  # Performance monitoring
+  monitor_performance: true
 
 # Do not change this
 config_version: 1

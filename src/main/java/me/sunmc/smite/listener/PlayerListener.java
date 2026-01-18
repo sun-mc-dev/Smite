@@ -37,9 +37,6 @@ public class PlayerListener implements Listener {
                             playerData.setData("selected_cell", data.selectedCell());
                             playerData.setData("cell_locked", data.cellLocked());
 
-                            // Load keybinds
-                            plugin.getKeybindManager().loadKeybinds(player);
-
                             Bukkit.getScheduler().runTask(plugin, () -> {
                                 player.sendMessage(Component.text("Welcome back! ", NamedTextColor.GREEN)
                                         .append(Component.text("Your cell: ", NamedTextColor.GRAY))
@@ -92,7 +89,6 @@ public class PlayerListener implements Listener {
 
         plugin.getAbilityManager().removePlayerData(player);
         plugin.getAbilityManager().getCooldownManager().clearCooldowns(player);
-        plugin.getKeybindManager().removeKeybinds(player);
         plugin.getGuiManager().closeGUI(player);
     }
 }

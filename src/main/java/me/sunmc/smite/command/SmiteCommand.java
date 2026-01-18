@@ -45,7 +45,6 @@ public class SmiteCommand implements TabExecutor {
             case "cooldown", "cd" -> handleCooldown(sender, args);
             case "reload" -> handleReload(sender);
             case "info" -> handleInfo(sender, args);
-            case "keybind", "key" -> handleKeybind(sender, args);
             default -> sendHelp(sender);
         }
 
@@ -64,8 +63,6 @@ public class SmiteCommand implements TabExecutor {
                 .append(Component.text(" - Manually activate an ability", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/smite info <ability>", NamedTextColor.YELLOW)
                 .append(Component.text(" - Show ability information", NamedTextColor.GRAY)));
-        sender.sendMessage(Component.text("/smite keybind <ability> <key>", NamedTextColor.YELLOW)
-                .append(Component.text(" - Set keybind", NamedTextColor.GRAY)));
 
         if (sender.hasPermission("smite.admin")) {
             sender.sendMessage(Component.text("/smite cooldown <player> <ability> clear", NamedTextColor.YELLOW)
@@ -242,38 +239,6 @@ public class SmiteCommand implements TabExecutor {
         }
     }
 
-    private void handleKeybind(@NotNull CommandSender sender, @NotNull String[] args) {
-        if (!(sender instanceof Player player)) {
-            sender.sendMessage(Component.text("Only players can use this command!", NamedTextColor.RED));
-            return;
-        }
-
-        if (args.length < 3) {
-            sender.sendMessage(Component.text("Usage: /smite keybind <ability> <key>", NamedTextColor.RED));
-            sender.sendMessage(Component.text("Available keys: KEY_R, KEY_F", NamedTextColor.GRAY));
-            return;
-        }
-
-        String abilityId = args[1].toLowerCase().replace("_", "");
-        Ability ability = findAbility(abilityId);
-
-        if (ability == null) {
-            sender.sendMessage(Component.text("Ability not found: " + args[1], NamedTextColor.RED));
-            return;
-        }
-
-        String keybind = args[2].toUpperCase();
-        if (!keybind.startsWith("KEY_")) {
-            keybind = "KEY_" + keybind;
-        }
-
-        plugin.getKeybindManager().setKeybind(player, ability.getId(), keybind);
-        sender.sendMessage(Component.text("Keybind set: ", NamedTextColor.GREEN)
-                .append(Component.text(ability.getDisplayName(), NamedTextColor.YELLOW))
-                .append(Component.text(" → ", NamedTextColor.GRAY))
-                .append(Component.text(keybind, NamedTextColor.AQUA)));
-    }
-
     private @Nullable Ability findAbility(@NotNull String searchTerm) {
         // Try exact ID match first
         Ability ability = plugin.getAbilityManager().getAbility(searchTerm);
@@ -300,9 +265,9 @@ public class SmiteCommand implements TabExecutor {
         List<String> completions = new ArrayList<>();
 
         if (args.length == 1) {
-            completions.addAll(Arrays.asList("select", "cells", "list", "activate", "cooldown", "reload", "info", "keybind"));
+            completions.addAll(Arrays.asList("select", "cells", "list", "activate", "cooldown", "reload", "info"));
         } else if (args.length == 2) {
-            if (args[0].equalsIgnoreCase("activate") || args[0].equalsIgnoreCase("info") || args[0].equalsIgnoreCase("keybind")) {
+            if (args[0].equalsIgnoreCase("activate") || args[0].equalsIgnoreCase("info")) {
                 completions.addAll(plugin.getAbilityManager().getAllAbilities().keySet());
             } else if (args[0].equalsIgnoreCase("cooldown")) {
                 completions.addAll(plugin.getServer().getOnlinePlayers().stream()
@@ -312,9 +277,8 @@ public class SmiteCommand implements TabExecutor {
         } else if (args.length == 3) {
             if (args[0].equalsIgnoreCase("cooldown")) {
                 completions.addAll(plugin.getAbilityManager().getAllAbilities().keySet());
-            } else if (args[0].equalsIgnoreCase("keybind")) {
-                completions.addAll(Arrays.asList("KEY_R", "KEY_F", "R", "F"));
             }
+
         } else if (args.length == 4 && args[0].equalsIgnoreCase("cooldown")) {
             completions.add("clear");
         }

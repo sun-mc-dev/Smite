@@ -279,9 +279,6 @@ public class PacketGUIManager extends PacketListenerAbstract {
             playerData.setData("selected_cell", cellId);
             playerData.setData("cell_locked", true);
 
-            // Load keybinds for the new cell
-            plugin.getKeybindManager().loadKeybinds(player);
-
             player.sendMessage(Component.text("Cell selected: ", NamedTextColor.GREEN)
                     .append(Component.text(Objects.requireNonNull(plugin.getCellManager().getCell(cellId)).getDisplayName(), NamedTextColor.GOLD)));
 

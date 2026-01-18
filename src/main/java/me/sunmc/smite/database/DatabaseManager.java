@@ -1,88 +1,107 @@
 package me.sunmc.smite.database;
 
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import me.sunmc.smite.Smite;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
- * Manages SQLite database operations for player data persistence.
+ * Manages SQLite database operations using HikariCP connection pool.
+ * Provides async operations for all database interactions.
  */
-public class DatabaseManager {
+public final class DatabaseManager implements AutoCloseable {
+
+    private static final String PLAYER_DATA_TABLE = """
+            CREATE TABLE IF NOT EXISTS player_data (
+                uuid TEXT PRIMARY KEY,
+                player_name TEXT NOT NULL,
+                selected_cell TEXT,
+                cell_locked BOOLEAN DEFAULT 0,
+                created_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL
+            )
+            """;
 
     private final Smite plugin;
-    private Connection connection;
+    private final ExecutorService executor;
+    private HikariDataSource dataSource;
 
     public DatabaseManager(@NotNull Smite plugin) {
         this.plugin = plugin;
+        this.executor = Executors.newVirtualThreadPerTaskExecutor();
+    }
+
+    private static @NotNull HikariConfig getHikariConfig(File dataFolder) {
+        File dbFile = new File(dataFolder, "smite.db");
+
+        HikariConfig config = new HikariConfig();
+        config.setJdbcUrl("jdbc:sqlite:" + dbFile.getAbsolutePath());
+        config.setDriverClassName("org.sqlite.JDBC");
+        config.setMaximumPoolSize(10);
+        config.setMinimumIdle(2);
+        config.setConnectionTimeout(30000);
+        config.setIdleTimeout(600000);
+        config.setMaxLifetime(1800000);
+        config.setPoolName("SmitePool");
+
+
+        config.addDataSourceProperty("cachePrepStmts", "true");
+        config.addDataSourceProperty("prepStmtCacheSize", "250");
+        config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
+        config.addDataSourceProperty("journal_mode", "WAL");
+        config.addDataSourceProperty("synchronous", "NORMAL");
+        return config;
     }
 
     /**
-     * Initializes the database connection and creates tables.
+     * Initializes the database connection pool and creates tables.
      */
     public void initialize() {
         try {
             File dataFolder = plugin.getDataFolder();
-            if (!dataFolder.exists()) {
-                dataFolder.mkdirs();
+            if (!dataFolder.exists() && !dataFolder.mkdirs()) {
+                throw new IllegalStateException("Failed to create plugin data folder");
             }
 
-            File dbFile = new File(dataFolder, "smite.db");
-            String url = "jdbc:sqlite:" + dbFile.getAbsolutePath();
+            final HikariConfig config = getHikariConfig(dataFolder);
 
-            connection = DriverManager.getConnection(url);
+            this.dataSource = new HikariDataSource(config);
+
             createTables();
 
-            plugin.getLogger().info("Database initialized successfully");
-        } catch (SQLException e) {
+            plugin.getLogger().info("Database initialized with HikariCP connection pool");
+        } catch (Exception e) {
             plugin.getLogger().severe("Failed to initialize database: " + e.getMessage());
-            e.printStackTrace();
+            throw new RuntimeException("Database initialization failed", e);
         }
     }
 
     /**
      * Creates necessary database tables.
      */
-    private void createTables() throws SQLException {
-        String playerDataTable = """
-                CREATE TABLE IF NOT EXISTS player_data (
-                    uuid TEXT PRIMARY KEY,
-                    player_name TEXT NOT NULL,
-                    selected_cell TEXT,
-                    cell_locked BOOLEAN DEFAULT 0,
-                    created_at INTEGER NOT NULL,
-                    updated_at INTEGER NOT NULL
-                )
-                """;
-
-        String keybindsTable = """
-                CREATE TABLE IF NOT EXISTS player_keybinds (
-                    uuid TEXT NOT NULL,
-                    ability_id TEXT NOT NULL,
-                    keybind TEXT NOT NULL,
-                    PRIMARY KEY (uuid, ability_id),
-                    FOREIGN KEY (uuid) REFERENCES player_data(uuid) ON DELETE CASCADE
-                )
-                """;
-
-        try (Statement stmt = connection.createStatement()) {
-            stmt.execute(playerDataTable);
-            stmt.execute(keybindsTable);
+    private void createTables() {
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(PLAYER_DATA_TABLE)) {
+            stmt.execute();
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to create tables", e);
         }
     }
 
     /**
      * Saves or updates player data asynchronously.
-     *
-     * @param player       The player
-     * @param selectedCell The selected cell ID (can be null)
-     * @param cellLocked   Whether the cell is locked
-     * @return CompletableFuture that completes when save is done
      */
     @NotNull
     public CompletableFuture<Void> savePlayerData(@NotNull Player player, @Nullable String selectedCell, boolean cellLocked) {
@@ -97,7 +116,9 @@ public class DatabaseManager {
                         updated_at = excluded.updated_at
                     """;
 
-            try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            try (Connection conn = dataSource.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+
                 long currentTime = System.currentTimeMillis();
                 stmt.setString(1, player.getUniqueId().toString());
                 stmt.setString(2, player.getName());
@@ -108,126 +129,64 @@ public class DatabaseManager {
                 stmt.executeUpdate();
             } catch (SQLException e) {
                 plugin.getLogger().severe("Failed to save player data: " + e.getMessage());
-                e.printStackTrace();
+                throw new RuntimeException("Database save failed", e);
             }
-        });
+        }, executor);
     }
 
     /**
      * Loads player data asynchronously.
-     *
-     * @param uuid Player UUID
-     * @return CompletableFuture with PlayerData, or null if not found
      */
     @NotNull
     public CompletableFuture<PlayerData> loadPlayerData(@NotNull UUID uuid) {
         return CompletableFuture.supplyAsync(() -> {
             String sql = "SELECT * FROM player_data WHERE uuid = ?";
 
-            try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-                stmt.setString(1, uuid.toString());
-                ResultSet rs = stmt.executeQuery();
+            try (Connection conn = dataSource.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-                if (rs.next()) {
-                    return new PlayerData(
-                            UUID.fromString(rs.getString("uuid")),
-                            rs.getString("player_name"),
-                            rs.getString("selected_cell"),
-                            rs.getBoolean("cell_locked"),
-                            rs.getLong("created_at"),
-                            rs.getLong("updated_at")
-                    );
+                stmt.setString(1, uuid.toString());
+
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        return new PlayerData(
+                                UUID.fromString(rs.getString("uuid")),
+                                rs.getString("player_name"),
+                                rs.getString("selected_cell"),
+                                rs.getBoolean("cell_locked"),
+                                rs.getLong("created_at"),
+                                rs.getLong("updated_at")
+                        );
+                    }
                 }
             } catch (SQLException e) {
                 plugin.getLogger().severe("Failed to load player data: " + e.getMessage());
-                e.printStackTrace();
             }
 
             return null;
-        });
+        }, executor);
     }
 
     /**
-     * Saves a player's keybind asynchronously.
-     *
-     * @param uuid      Player UUID
-     * @param abilityId Ability ID
-     * @param keybind   Keybind string (e.g., "KEY_R", "KEY_F")
-     * @return CompletableFuture that completes when save is done
+     * Closes the database connection pool and executor.
      */
-    @NotNull
-    public CompletableFuture<Void> saveKeybind(@NotNull UUID uuid, @NotNull String abilityId, @NotNull String keybind) {
-        return CompletableFuture.runAsync(() -> {
-            String sql = """
-                    INSERT INTO player_keybinds (uuid, ability_id, keybind)
-                    VALUES (?, ?, ?)
-                    ON CONFLICT(uuid, ability_id) DO UPDATE SET
-                        keybind = excluded.keybind
-                    """;
-
-            try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-                stmt.setString(1, uuid.toString());
-                stmt.setString(2, abilityId);
-                stmt.setString(3, keybind);
-                stmt.executeUpdate();
-            } catch (SQLException e) {
-                plugin.getLogger().severe("Failed to save keybind: " + e.getMessage());
-                e.printStackTrace();
-            }
-        });
-    }
-
-    /**
-     * Loads a player's keybind asynchronously.
-     *
-     * @param uuid      Player UUID
-     * @param abilityId Ability ID
-     * @return CompletableFuture with keybind string, or null if not found
-     */
-    @NotNull
-    public CompletableFuture<String> loadKeybind(@NotNull UUID uuid, @NotNull String abilityId) {
-        return CompletableFuture.supplyAsync(() -> {
-            String sql = "SELECT keybind FROM player_keybinds WHERE uuid = ? AND ability_id = ?";
-
-            try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-                stmt.setString(1, uuid.toString());
-                stmt.setString(2, abilityId);
-                ResultSet rs = stmt.executeQuery();
-
-                if (rs.next()) {
-                    return rs.getString("keybind");
-                }
-            } catch (SQLException e) {
-                plugin.getLogger().severe("Failed to load keybind: " + e.getMessage());
-                e.printStackTrace();
-            }
-
-            return null;
-        });
-    }
-
-    /**
-     * Closes the database connection.
-     */
+    @Override
     public void close() {
-        try {
-            if (connection != null && !connection.isClosed()) {
-                connection.close();
-                plugin.getLogger().info("Database connection closed");
-            }
-        } catch (SQLException e) {
-            plugin.getLogger().severe("Failed to close database: " + e.getMessage());
-            e.printStackTrace();
+        if (dataSource != null && !dataSource.isClosed()) {
+            dataSource.close();
+            plugin.getLogger().info("Database connection pool closed");
         }
+
+        executor.shutdown();
     }
 
     /**
      * Represents player data from the database.
      */
     public record PlayerData(
-            UUID uuid,
-            String playerName,
-            String selectedCell,
+            @NotNull UUID uuid,
+            @NotNull String playerName,
+            @Nullable String selectedCell,
             boolean cellLocked,
             long createdAt,
             long updatedAt
